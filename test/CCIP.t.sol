@@ -8,6 +8,10 @@ import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {VotingPositionToken} from "../src/VotingPositionToken.sol";
 import {VoteMarket} from "../src/VoteMarket.sol";
 import {Settlement} from "../src/Settlement.sol";
+import {Reputation} from "../src/Reputation.sol";
+import {YieldSplitter} from "../src/yield/YieldSplitter.sol";
+import {YieldVaultAdapter} from "../src/yield/YieldVaultAdapter.sol";
+import {YieldToken} from "../src/yield/YieldToken.sol";
 import {CCIPStakeSender} from "../src/ccip/CCIPStakeSender.sol";
 import {CCIPStakeReceiver} from "../src/ccip/CCIPStakeReceiver.sol";
 import {StakeIntent} from "../src/ccip/StakeIntent.sol";
@@ -136,5 +140,74 @@ contract CCIPTest {
         vm.prank(ALICE);
         receiver.recover(messageId, ALICE);
         require(usdc.balanceOf(ALICE) == 10_000_000, "refund");
+    }
+
+    function testEightVoterCCIPYieldSettlementAndREPWorkflow() public {
+        YieldSplitter splitter =
+            new YieldSplitter(usdc, registry, address(market), address(settlement), address(0x7EA5));
+        YieldVaultAdapter vault = new YieldVaultAdapter(usdc, address(splitter), address(this));
+        splitter.configureVault(vault);
+        market.configureSplitter(splitter);
+
+        // Alice funds the Yes side through the official Client message shape.
+        vm.prank(ALICE);
+        sender.stakeRemote(_intent(3), 5_000_000, "");
+        require(positions.balanceOf(ALICE, positions.tokenId(id, true)) == 5_000_000, "remote receipt");
+        for (uint256 i; i < 7; i++) {
+            address voter = address(uint160(0x100 + i));
+            usdc.mint(voter, 10_000_000);
+            vm.prank(voter);
+            usdc.approve(address(market), 10_000_000);
+            vm.prank(voter);
+            market.stakeLocal(id, i < 4, 10_000_000, voter);
+        }
+        require(market.total(id, true) == 45_000_000, "five yes voters");
+        require(market.total(id, false) == 30_000_000, "three no voters");
+        require(usdc.balanceOf(address(market)) == 75_000_000, "all votes funded");
+
+        vm.warp(lockTime);
+        market.lock(id);
+        YieldToken yt = splitter.yieldToken(id);
+        require(splitter.principalToken().balanceOf(id, address(settlement)) == 75_000_000, "PT escrow");
+        require(yt.balanceOf(address(0x7EA5)) == 75_000_000, "YT treasury");
+        usdc.mint(address(this), 7_500_000);
+        usdc.approve(address(vault), 7_500_000);
+        vault.injectYield(7_500_000);
+        splitter.checkpointYield(id);
+        vm.prank(address(0x7EA5));
+        require(yt.claimYield() == 7_500_000, "YT yield separate from verdict");
+
+        vm.warp(lockTime + 30 days);
+        settlement.propose(id, Settlement.Outcome.Yes, keccak256("evidence"));
+        vm.warp(block.timestamp + 1 days);
+        settlement.finalize(id);
+        uint256 winnerPaid;
+        vm.prank(ALICE);
+        winnerPaid += settlement.redeemVPT(id, true, 5_000_000);
+        for (uint256 i; i < 7; i++) {
+            address voter = address(uint160(0x100 + i));
+            vm.prank(voter);
+            uint256 paid = settlement.redeemVPT(id, i < 4, 10_000_000);
+            if (i < 4) winnerPaid += paid;
+            else require(paid == 0, "loser paid");
+        }
+        settlement.claimFee(id);
+        require(usdc.balanceOf(address(0x7EA5)) == 13_500_000, "yield plus six fee");
+        require(winnerPaid + 6_000_000 <= 75_000_000, "principal solvent");
+        require(75_000_000 - winnerPaid - 6_000_000 <= 5, "bounded principal dust");
+
+        Reputation reputation = new Reputation(settlement, vm.addr(REVIEWER_KEY));
+        bytes32 nullifier = keccak256("scoped-human-claim");
+        uint64 expiry = uint64(block.timestamp + 1 hours);
+        bytes32 digest = reputation.authorizationDigest(id, ALICE, nullifier, 7, expiry);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(REVIEWER_KEY, digest);
+        reputation.claimWinnerREP(id, ALICE, nullifier, 7, expiry, abi.encodePacked(r, s, v));
+        require(reputation.balanceOf(ALICE, id) == 1, "winning human badge");
+        vm.expectRevert();
+        reputation.claimWinnerREP(id, ALICE, nullifier, 7, expiry, abi.encodePacked(r, s, v));
+
+        vm.warp(block.timestamp + 90 days + 1);
+        settlement.sweepDust(id);
+        require(usdc.balanceOf(address(market)) == 0, "all principal accounted");
     }
 }
