@@ -2,8 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {MockUSDC} from "./Voting.t.sol";
-import {MockCCIPRouter} from "./CCIP.t.sol";
+import {V2MockUSD} from "./helpers/V2Mocks.sol";
+import {V2MockCCIPRouter} from "./helpers/V2Mocks.sol";
 import {Client} from "chainlink-ccip/libraries/Client.sol";
 import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {RiskFiStakeVaultV2} from "../src/v2/RiskFiStakeVaultV2.sol";
@@ -18,8 +18,8 @@ contract CCIPV2Test is Test {
     address constant BOB = address(0xB0B);
     address constant CAROL = address(0xCA401);
     address constant TREASURY = address(0x7EA5);
-    MockUSDC usdc;
-    MockCCIPRouter router;
+    V2MockUSD usdc;
+    V2MockCCIPRouter router;
     ReportRegistry registry;
     RiskFiStakeVaultV2 vault;
     CCIPStakeSenderV2 sender;
@@ -29,8 +29,8 @@ contract CCIPV2Test is Test {
     uint64 lockTime;
 
     function setUp() public {
-        usdc = new MockUSDC();
-        router = new MockCCIPRouter();
+        usdc = new V2MockUSD();
+        router = new V2MockCCIPRouter();
         registry = new ReportRegistry(address(this));
         vault = new RiskFiStakeVaultV2(usdc, registry, address(this), TREASURY);
         lockTime = uint64(block.timestamp + 2 days);

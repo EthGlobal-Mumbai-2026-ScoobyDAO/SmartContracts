@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {MockUSDC} from "./Voting.t.sol";
+import {V2MockUSD} from "./helpers/V2Mocks.sol";
 import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {RiskFiStakeVaultV2} from "../src/v2/RiskFiStakeVaultV2.sol";
 import {StakerYieldToken} from "../src/v2/StakerYieldToken.sol";
@@ -16,7 +16,7 @@ contract RepReceiptV2Test is Test {
     address constant BOB = address(0xB0B);
     address constant CAROL = address(0xCA401);
     address constant TREASURY = address(0x7EA5);
-    MockUSDC usdc;
+    V2MockUSD usdc;
     ReportRegistry registry;
     RiskFiStakeVaultV2 vault;
     StakeReceiptREP rep;
@@ -25,7 +25,7 @@ contract RepReceiptV2Test is Test {
     uint64 lockTime;
 
     function setUp() public {
-        usdc = new MockUSDC();
+        usdc = new V2MockUSD();
         registry = new ReportRegistry(address(this));
         vault = new RiskFiStakeVaultV2(usdc, registry, address(this), TREASURY);
         rep = vault.rep();

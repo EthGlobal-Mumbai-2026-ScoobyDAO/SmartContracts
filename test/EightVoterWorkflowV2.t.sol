@@ -2,11 +2,12 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {MockUSDC} from "./Voting.t.sol";
-import {MockCCIPRouter} from "./CCIP.t.sol";
+import {V2MockUSD} from "./helpers/V2Mocks.sol";
+import {V2MockCCIPRouter} from "./helpers/V2Mocks.sol";
 import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {RiskFiStakeVaultV2} from "../src/v2/RiskFiStakeVaultV2.sol";
 import {StakerYieldToken} from "../src/v2/StakerYieldToken.sol";
+import {StakeReceiptREP} from "../src/v2/StakeReceiptREP.sol";
 import {YieldCurveHookV2} from "../src/v2/YieldCurveHookV2.sol";
 import {StakeAndSellRouterV2} from "../src/v2/StakeAndSellRouterV2.sol";
 import {CCIPStakeSenderV2} from "../src/v2/CCIPStakeSenderV2.sol";
@@ -32,15 +33,17 @@ contract EightVoterWorkflowV2Test is Test {
     address constant HEIDI = address(0x4E1D1);
     address constant TREASURY = address(0x7EA5);
 
-    MockUSDC usdc;
+    V2MockUSD usdc;
+    V2MockUSD sourceUSD;
     ReportRegistry registry;
     RiskFiStakeVaultV2 vault;
     StakerYieldToken yt;
+    StakeReceiptREP rep;
     PoolManager manager;
     YieldCurveHookV2 hook;
     YieldSwapRouter swapRouter;
     StakeAndSellRouterV2 atomicRouter;
-    MockCCIPRouter ccipRouter;
+    V2MockCCIPRouter ccipRouter;
     CCIPStakeSenderV2 ccipSender;
     CCIPStakeReceiverV2 ccipReceiver;
     PoolKey key;
@@ -48,7 +51,8 @@ contract EightVoterWorkflowV2Test is Test {
     uint64 lockTime;
 
     function setUp() public {
-        usdc = new MockUSDC();
+        usdc = new V2MockUSD();
+        sourceUSD = new V2MockUSD();
         registry = new ReportRegistry(address(this));
         vault = new RiskFiStakeVaultV2(usdc, registry, address(this), TREASURY);
         lockTime = uint64(block.timestamp + 2 days);
@@ -68,6 +72,7 @@ contract EightVoterWorkflowV2Test is Test {
         reportId = registry.publish(r, 1, approvalExpiry, abi.encodePacked(a, b, v));
         vault.initializeSeries(reportId);
         yt = vault.yt();
+        rep = vault.rep();
 
         manager = new PoolManager(address(this));
         YieldCurveHookV2 implementation = new YieldCurveHookV2(
@@ -83,9 +88,10 @@ contract EightVoterWorkflowV2Test is Test {
         manager.initialize(key, 1 << 96);
         swapRouter = new YieldSwapRouter(IPoolManager(address(manager)));
         atomicRouter = new StakeAndSellRouterV2(vault, hook, swapRouter, key);
-        ccipRouter = new MockCCIPRouter();
+        ccipRouter = new V2MockCCIPRouter();
+        ccipRouter.setTokenPair(sourceUSD, usdc);
         ccipReceiver = new CCIPStakeReceiverV2(address(ccipRouter), ccipRouter.SOURCE(), usdc, vault, address(this));
-        ccipSender = new CCIPStakeSenderV2(ccipRouter, usdc, 98765, address(ccipReceiver));
+        ccipSender = new CCIPStakeSenderV2(ccipRouter, sourceUSD, 98765, address(ccipReceiver));
         ccipReceiver.configureSourceSender(address(ccipSender));
         ccipSender.configureReportCutoff(reportId, uint64(lockTime - 1 days));
 
@@ -96,7 +102,9 @@ contract EightVoterWorkflowV2Test is Test {
         _fundVoter(EVE, 20_000_000);
         _fundVoter(FRANK, 15_000_000);
         _fundVoter(GRACE, 10_000_000);
-        _fundVoter(HEIDI, 5_000_000);
+        sourceUSD.mint(HEIDI, 5_000_000);
+        vm.prank(HEIDI);
+        sourceUSD.approve(address(ccipSender), type(uint256).max);
         usdc.mint(address(this), 33_000_000);
         usdc.approve(address(vault), type(uint256).max);
     }
@@ -107,7 +115,6 @@ contract EightVoterWorkflowV2Test is Test {
         usdc.approve(address(vault), type(uint256).max);
         usdc.approve(address(atomicRouter), type(uint256).max);
         usdc.approve(address(swapRouter), type(uint256).max);
-        usdc.approve(address(ccipSender), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -134,14 +141,20 @@ contract EightVoterWorkflowV2Test is Test {
     }
 
     function _remoteKeep(address person, bool yes, uint256 amount) internal {
+        ccipRouter.setAutoDeliver(false);
         StakeIntentV2 memory intent =
             StakeIntentV2(2, reportId, yes, person, person, 9, uint64(lockTime + 1 days), amount);
         vm.prank(person);
         bytes32 messageId = ccipSender.stakeRemote(intent, amount, "");
+        assertFalse(ccipReceiver.delivered(messageId), "message waits in source router");
+        assertEq(vault.positionOf(person, yes), 0, "no unfunded destination position");
+        ccipRouter.deliver(messageId);
         assertTrue(ccipReceiver.delivered(messageId));
         assertEq(ccipReceiver.recoverable(messageId), 0);
         assertEq(vault.positionOf(person, yes), amount);
         assertEq(yt.balanceOf(person), amount);
+        assertEq(sourceUSD.balanceOf(person), 0);
+        assertEq(sourceUSD.totalSupply(), 0, "source collateral burned during simulated bridge");
     }
 
     function testEightVotersFromApprovalThroughYieldTradingAndVerdict() public {
@@ -153,7 +166,14 @@ contract EightVoterWorkflowV2Test is Test {
         hook.addLiquidity(10_000_000, 30_000_000, 1);
         vm.stopPrank();
 
-        _keep(ALICE, true, 80_000_000);
+        vm.startPrank(ALICE);
+        vault.deposit(81_000_000, ALICE);
+        assertEq(rep.balanceOf(ALICE), 81_000_000, "deposit issues REP 1:1");
+        vault.stakeFromREP(reportId, true, 80_000_000, ALICE, ALICE);
+        vm.stopPrank();
+        assertEq(rep.balanceOf(ALICE), 1_000_000, "unstaked REP remains withdrawable");
+        assertEq(vault.positionOf(ALICE, true), 80_000_000);
+        assertEq(yt.balanceOf(ALICE), 80_000_000);
         _sellOnStake(BOB, false, 40_000_000);
         _keep(DAVE, false, 20_000_000);
         _sellOnStake(EVE, true, 20_000_000);
@@ -163,7 +183,7 @@ contract EightVoterWorkflowV2Test is Test {
         assertEq(vault.totalYes(), 145_000_000);
         assertEq(vault.totalNo(), 75_000_000);
         assertEq(yt.totalSupply(), 220_000_000);
-        assertEq(usdc.balanceOf(address(vault)), 220_000_000);
+        assertEq(usdc.balanceOf(address(vault)), 221_000_000, "includes idle REP backing");
         assertEq(registry.reportCount(), 1);
 
         // First period: each current YT holder earns 0.10 dUSD per YT.
@@ -185,6 +205,12 @@ contract EightVoterWorkflowV2Test is Test {
         yieldClaimed += 1_000_000;
         assertEq(_claimYT(BOB), 0);
         assertEq(_claimYT(EVE), 0);
+
+        vm.warp(lockTime);
+        vm.expectRevert(bytes("CLOSED"));
+        vm.prank(ALICE);
+        vault.stakeFromREP(reportId, true, 1_000_000, ALICE, ALICE);
+        assertEq(rep.balanceOf(ALICE), 1_000_000, "lock does not consume idle REP");
 
         // Alice buys future YT through v4. She cannot take Carol's earlier LP yield.
         vm.warp(block.timestamp + 10 days);
@@ -251,6 +277,10 @@ contract EightVoterWorkflowV2Test is Test {
         hook.removeLiquidity(carolShares, 0, 0);
         vm.warp(uint256(vault.finalizedAt()) + 90 days + 1);
         vault.sweepDust();
+        assertEq(usdc.balanceOf(address(vault)), 1_000_000, "sweep preserves idle REP backing");
+        vm.prank(ALICE);
+        vault.withdraw(1_000_000);
+        assertEq(rep.totalSupply(), 0);
         assertEq(usdc.balanceOf(address(vault)), 0);
         assertLe(usdc.balanceOf(address(hook)), 2, "bounded LP index dust");
         assertEq(usdc.balanceOf(address(atomicRouter)), 0);
@@ -284,5 +314,31 @@ contract EightVoterWorkflowV2Test is Test {
         assertEq(vault.positionOf(HEIDI, true), 5_000_000);
         assertEq(usdc.balanceOf(HEIDI), proceeds);
         assertEq(usdc.balanceOf(address(vault)), 35_000_000);
+    }
+
+    function testLateCrossChainDeliveryBecomesWithdrawableREPWithoutCreatingPosition() public {
+        ccipRouter.setAutoDeliver(false);
+        StakeIntentV2 memory intent =
+            StakeIntentV2(2, reportId, true, HEIDI, HEIDI, 10, uint64(lockTime + 1 days), 5_000_000);
+        vm.prank(HEIDI);
+        bytes32 messageId = ccipSender.stakeRemote(intent, 5_000_000, "");
+        assertEq(sourceUSD.balanceOf(HEIDI), 0);
+        assertEq(usdc.balanceOf(HEIDI), 0);
+        vm.warp(lockTime);
+        ccipRouter.deliver(messageId);
+        assertEq(ccipReceiver.recoverable(messageId), 0);
+        assertEq(vault.positionOf(HEIDI, true), 0);
+        assertEq(yt.balanceOf(HEIDI), 0);
+        assertEq(rep.balanceOf(HEIDI), 5_000_000, "late delivery credits source payer with REP");
+        vm.expectRevert(bytes("NO_FUNDS"));
+        vm.prank(HEIDI);
+        ccipReceiver.recover(messageId, HEIDI);
+        vm.prank(HEIDI);
+        vault.withdraw(5_000_000);
+        assertEq(usdc.balanceOf(HEIDI), 5_000_000, "source payer receives destination collateral");
+        assertEq(usdc.balanceOf(address(ccipReceiver)), 0);
+        assertEq(usdc.balanceOf(address(vault)), 0);
+        assertEq(rep.totalSupply(), 0);
+        assertEq(sourceUSD.totalSupply(), 0);
     }
 }

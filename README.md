@@ -34,7 +34,7 @@ The [developer feedback file](FEEDBACK.md) describes the implementation challeng
 
 V2 has passed local tests, including a fork that uses Sepolia's deployed PoolManager. The V2 hook, router, and pool are **not deployed**; no live V2 swap or feedback-form submission is claimed.
 
-The new staker-owned PT/YT, time-aware Uniswap design, and Chainlink CCIP funded-vote route are implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
+The active demo flow is V2: REP deposit, staker-owned YT, time-aware Uniswap market, and Chainlink CCIP funded vote. It is implemented under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). Run the [V2-only end-to-end test](V2_E2E.md) with `forge test --match-path 'test/*V2.t.sol' --summary`. V2 is local-only pending review; the deployed V1 contracts have not been replaced.
 
 End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and recovery cases), and [`CCIP.t.sol`](test/CCIP.t.sol) (V1 workflow).
 

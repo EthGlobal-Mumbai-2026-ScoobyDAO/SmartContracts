@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {MockUSDC} from "./Voting.t.sol";
+import {V2MockUSD} from "./helpers/V2Mocks.sol";
 import {StakerYieldToken} from "../src/v2/StakerYieldToken.sol";
 import {YieldCurveHookV2} from "../src/v2/YieldCurveHookV2.sol";
 import {YieldCurveFactoryV2} from "../src/v2/YieldCurveFactoryV2.sol";
@@ -21,7 +21,7 @@ contract V2LivePoolForkTest is Test {
     uint256 constant MIN_RATE = 5e16;
     uint256 constant MAX_RATE = 2e17;
 
-    function _deployHook(IPoolManager manager, MockUSDC usdc, StakerYieldToken yt, uint64 maturity)
+    function _deployHook(IPoolManager manager, V2MockUSD usdc, StakerYieldToken yt, uint64 maturity)
         internal
         returns (YieldCurveHookV2 hook)
     {
@@ -55,7 +55,7 @@ contract V2LivePoolForkTest is Test {
         vm.createSelectFork(rpc);
         IPoolManager manager = IPoolManager(vm.envAddress("SEPOLIA_V4_POOL_MANAGER"));
         assertGt(address(manager).code.length, 0);
-        MockUSDC usdc = new MockUSDC();
+        V2MockUSD usdc = new V2MockUSD();
         uint64 maturity = uint64(block.timestamp + 30 days);
         StakerYieldToken yt = new StakerYieldToken(usdc, address(this), maturity);
         yt.mint(address(this), 1_000_000_000);

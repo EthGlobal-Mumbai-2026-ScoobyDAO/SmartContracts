@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {MockUSDC} from "./Voting.t.sol";
+import {V2MockUSD} from "./helpers/V2Mocks.sol";
 import {StakerYieldToken} from "../src/v2/StakerYieldToken.sol";
 import {YieldCurveHookV2} from "../src/v2/YieldCurveHookV2.sol";
 import {YieldCurveFactoryV2} from "../src/v2/YieldCurveFactoryV2.sol";
@@ -20,7 +20,7 @@ contract YieldCurveV2Test is Test {
     uint256 constant SLOPE = 5e6;
     uint256 constant MIN_RATE = 5e16;
     uint256 constant MAX_RATE = 2e17;
-    MockUSDC usdc;
+    V2MockUSD usdc;
     StakerYieldToken yt;
     PoolManager manager;
     YieldCurveHookV2 hook;
@@ -29,7 +29,7 @@ contract YieldCurveV2Test is Test {
     uint64 maturity;
 
     function setUp() public {
-        usdc = new MockUSDC();
+        usdc = new V2MockUSD();
         maturity = uint64(block.timestamp + 30 days);
         yt = new StakerYieldToken(usdc, address(this), maturity);
         yt.mint(address(this), 1_000_000_000);
