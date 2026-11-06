@@ -84,6 +84,8 @@ contract YieldAccountingTest {
         require(yt.claimYield() == 7_500_000, "Alice yield");
         require(usdc.balanceOf(address(yt)) == 0, "yield conservation");
         vm.warp(lockTime + 30 days);
+        vm.expectRevert();
+        vault.injectYield(1);
         settlement.propose(id, Settlement.Outcome.Yes, keccak256("evidence"));
         vm.warp(block.timestamp + 1 days);
         settlement.finalize(id);

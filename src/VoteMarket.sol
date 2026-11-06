@@ -97,13 +97,13 @@ contract VoteMarket is Guard {
     function release(uint256 id, address recipient, uint256 amount) external nonReentrant returns (uint256 paid) {
         require(msg.sender == settlement, "SETTLEMENT");
         require(recipient != address(0), "RECIPIENT");
-        uint256 total = totals[id][0] + totals[id][1];
+        uint256 totalPrincipal = totals[id][0] + totals[id][1];
         principalReleased[id] += amount;
-        require(principalReleased[id] <= total, "INSOLVENT");
+        require(principalReleased[id] <= totalPrincipal, "INSOLVENT");
         paid = amount;
         if (address(splitter) != address(0)) {
             require(locked[id] && splitter.prepared(id), "NOT_PREPARED");
-            paid = amount * splitter.principalAvailable(id) / total;
+            paid = amount * splitter.principalAvailable(id) / totalPrincipal;
         }
         principalPaidActual[id] += paid;
         usdc.safeTransfer(recipient, paid);

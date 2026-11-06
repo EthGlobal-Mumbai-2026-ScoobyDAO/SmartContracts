@@ -50,6 +50,7 @@ contract VotingTest {
     uint256 internal constant REVIEWER_KEY = 0xA11CE;
     address internal constant ALICE = address(0xA11CE);
     address internal constant BOB = address(0xB0B);
+    address internal constant CAROL = address(0xCA401);
     address internal constant TREASURY = address(0x7EA5);
     MockUSDC usdc;
     ReportRegistry registry;
@@ -148,6 +149,43 @@ contract VotingTest {
         vm.prank(ALICE);
         market.stakeLocal(id, true, 100_000_000, ALICE);
         require(market.total(id, true) == 0, "unfunded");
+    }
+
+    function testPublicationRejectsInvalidAndExpiredApproval() public {
+        ReportRegistry.Report memory r = registry.getReport(id);
+        uint64 expiry = uint64(block.timestamp + 1 hours);
+        (uint8 v, bytes32 a, bytes32 b) = vm.sign(0xBAD, registry.approvalDigest(r, 2, expiry));
+        vm.expectRevert();
+        registry.publish(r, 2, expiry, abi.encodePacked(a, b, v));
+        uint64 expired = uint64(block.timestamp - 1);
+        (v, a, b) = vm.sign(REVIEWER_KEY, registry.approvalDigest(r, 3, expired));
+        vm.expectRevert();
+        registry.publish(r, 3, expired, abi.encodePacked(a, b, v));
+        require(registry.reportCount() == 1, "unapproved report opened");
+    }
+
+    function testRoundingDustSweptAfterClaimsExpire() public {
+        usdc.mint(CAROL, 1);
+        vm.prank(CAROL);
+        usdc.approve(address(market), 1);
+        vm.prank(ALICE);
+        market.stakeLocal(id, true, 2, ALICE);
+        vm.prank(BOB);
+        market.stakeLocal(id, true, 1, BOB);
+        vm.prank(CAROL);
+        market.stakeLocal(id, false, 1, CAROL);
+        _finalize(Settlement.Outcome.Yes);
+        vm.prank(ALICE);
+        settlement.redeemVPT(id, true, 2);
+        vm.prank(BOB);
+        settlement.redeemVPT(id, true, 1);
+        require(usdc.balanceOf(address(market)) == 1, "dust remains");
+        vm.expectRevert();
+        settlement.sweepDust(id);
+        (,,,, uint64 finalizedAt,) = settlement.decisions(id);
+        vm.warp(uint256(finalizedAt) + 90 days + 1);
+        settlement.sweepDust(id);
+        require(usdc.balanceOf(TREASURY) == 1, "dust swept");
     }
 
     function testOneREPForOneNullifier() public {

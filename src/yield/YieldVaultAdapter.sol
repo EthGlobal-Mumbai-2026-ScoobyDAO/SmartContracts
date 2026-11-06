@@ -10,6 +10,7 @@ contract YieldVaultAdapter is Guard {
     address public immutable splitter;
     address public immutable admin;
     uint256 public principal;
+    uint64 public maturity;
     event YieldInjected(uint256 amount);
     event SimulatedLoss(uint256 amount);
 
@@ -22,6 +23,11 @@ contract YieldVaultAdapter is Guard {
 
     function totalAssets() public view returns (uint256) {
         return asset.balanceOf(address(this));
+    }
+
+    function configureMaturity(uint64 maturity_) external {
+        require(msg.sender == splitter && maturity == 0 && maturity_ > block.timestamp, "MATURITY");
+        maturity = maturity_;
     }
 
     function positiveYield() external view returns (uint256) {
@@ -50,6 +56,7 @@ contract YieldVaultAdapter is Guard {
     }
 
     function injectYield(uint256 amount) external nonReentrant {
+        require(maturity != 0 && block.timestamp < maturity, "ACCRUAL_CLOSED");
         uint256 beforeBalance = totalAssets();
         asset.safeTransferFrom(msg.sender, address(this), amount);
         require(totalAssets() - beforeBalance == amount, "TOKEN_DELTA");

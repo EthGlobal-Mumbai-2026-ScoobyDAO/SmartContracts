@@ -59,6 +59,9 @@ contract YieldSplitter is Guard {
         yieldToken[id] = yt;
         principalToken.mint(settlement, id, amount);
         yt.mint(treasury, amount);
+        if (block.timestamp < uint256(r.lockTime) + 30 days) {
+            vault.configureMaturity(uint64(uint256(r.lockTime) + 30 days));
+        }
         usdc.safeApprove(address(vault), amount);
         vault.deposit(amount);
         emit Locked(id, amount, address(yt));
