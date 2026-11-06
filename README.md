@@ -42,3 +42,14 @@ The local V2 suite has **25 passing tests**. `test/DemoUSD.t.sol` separately che
 The V2 contracts are deployed and verified on Ethereum Sepolia and Arbitrum Sepolia. The 5 dUSD No vote sent from Arbitrum Sepolia reached [CCIP SUCCESS](https://ccip.chain.link/#/side-drawer/msg/0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d) after a higher-gas manual retry; the receiver's `delivered` flag is true, the wallet's No position is 15 dUSD, and the wallet holds 5.000232 YT. A second live yield period paid the newly delivered YT [0.434802 dUSD](https://sepolia.etherscan.io/tx/0x2ec3844e8ddfe4627488fadad6a3ab57dd8543125b936168ee96ec550d64039d). V2 fixes maturity at **30 days after the report lock**. Live verdict finalization and principal redemption cannot happen before then; a local fork advances time to test those phases against deployed bytecode and state.
 
 The onchain report uses one vault and one YT series. It is a public demo: stakes and sides are visible, REP is a collateral receipt, the verdict position cannot be transferred, and the YT is transferable. Existing V1 contracts remain onchain but are not part of the active V2 workflow.
+
+## Known limits and source changes after deployment
+
+The source on `main` includes fixes made **after** the Sepolia deployment. The deployed bytecode and every transaction linked above are unchanged; the fixes take effect only on a redeploy.
+
+- **Late finalization:** `finalize()` now settles an unchallenged proposal as proposed once its challenge period has passed, even after `resultDeadline`. The deployed vault returns Void for any `finalize()` called after the deadline.
+- **Challenges:** `challenge()` emits `Challenged`. A challenge needs no bond, so any address can force a report to the adjudicator; an unresolved challenge settles as Void after `resultDeadline`.
+- **Series initialization:** `initializeSeries` is admin-only in source; the deployed vault is already initialized.
+- **Later LPs:** `addLiquidity` treats both amounts as maximums and charges only the reserve-proportional amount, instead of requiring an exact ratio.
+- **Demo admin power:** `simulateLoss` lets the vault admin move staked principal (never idle REP collateral) to any address before finalization. It exists to demonstrate principal-loss accounting and is not safe for real funds.
+- **Swaps need `YieldSwapRouter`:** the hook takes the input token during `beforeSwap`, so the input must already be settled in the PoolManager. Routers that swap before settling, such as the standard v4 periphery router, revert against this pool.

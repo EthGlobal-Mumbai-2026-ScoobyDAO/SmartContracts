@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 /// @notice REP: 1:1 receipt for collateral deposited in RiskFiStakeVaultV2 and not yet staked.
 /// Only the vault mints (deposit) and burns (stake or withdraw), so REP is never a claim on
 /// collateral that already backs a verdict position. Transferable so a CCIP adapter can hand an
-/// unstakeable delivery to its payer. Not related to the World IDKit badge in `src/Reputation.sol`.
+/// unstakeable delivery to its payer. Not a reputation or identity badge.
 contract StakeReceiptREP {
     string public constant name = "RiskFi Stake Receipt";
     string public constant symbol = "REP";

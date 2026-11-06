@@ -185,6 +185,10 @@ contract YieldCurveHookV2 is Guard {
         _checkpointAccount(to);
     }
 
+    /// @notice `usdcAmount` and `ytAmount` are maximums. The first LP sets the ratio. Later LPs
+    /// receive shares for the smaller side and are charged only the reserve-proportional amount
+    /// of each token (rounded up, in the pool's favour), so a swap landing between quote and
+    /// transaction no longer reverts the deposit; `minShares` bounds the result.
     function addLiquidity(uint256 usdcAmount, uint256 ytAmount, uint256 minShares)
         external
         nonReentrant
@@ -199,8 +203,10 @@ contract YieldCurveHookV2 is Guard {
         } else {
             uint256 byUSDC = usdcAmount * supply / usdcReserve;
             uint256 byYT = ytAmount * supply / ytReserve;
-            require(byUSDC == byYT, "RATIO");
-            minted = byUSDC;
+            minted = byUSDC < byYT ? byUSDC : byYT;
+            // minted <= amount * supply / reserve, so each rounded-up charge stays <= its maximum.
+            usdcAmount = Math.mulDiv(minted, usdcReserve, supply, Math.Rounding.Up);
+            ytAmount = Math.mulDiv(minted, ytReserve, supply, Math.Rounding.Up);
         }
         require(minted >= minShares && minted > 0, "MIN_SHARES");
         uint256 beforeUSDC = usdc.balanceOf(address(this));
