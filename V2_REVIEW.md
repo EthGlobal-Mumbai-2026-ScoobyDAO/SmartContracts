@@ -17,6 +17,7 @@ Run `set -a; source .env; set +a; forge test --summary` to include live fork che
 
 - The vault uses **simulated yield injection** over DemoUSD. It is not an ERC-4626 lending integration, and DemoUSD is not Circle USDC.
 - One V2 vault and YT series serves one report. Fungible YT across multiple reports sharing a maturity needs a separate bucket design and index-normalized accounting.
+- V2 stakes and their Yes/No sides are public onchain. The non-transferable verdict position prevents secondary trading; it does not provide stake privacy.
 - V2 has no CCIP destination adapter or World backend yet. Existing deployed V1 CCIP contracts are tied to the V1 market and cannot credit a V2 position.
 - The hook and atomic router are not deployed on Sepolia. The fork test executes only in local EVM state. A live swap, frontend flow, and end-to-end prize evidence remain pending.
 - The curve is a bounded market price mechanism, not an oracle for future yield or the report verdict. Formal security review, adversarial testing, and real-yield liquidity design are still required before non-demo funds.
