@@ -48,6 +48,7 @@ contract RiskFiStakeVaultV2 is Guard {
     event YieldInjected(uint256 amount);
     event LossSimulated(uint256 amount);
     event Proposed(Outcome outcome, bytes32 evidenceHash);
+    event Challenged(address indexed challenger, bytes32 evidenceHash);
     event Finalized(Outcome outcome, uint256 principalAvailable);
     event PrincipalClaimed(address indexed owner, bool yes, uint256 amount, uint256 paid);
 
@@ -61,7 +62,10 @@ contract RiskFiStakeVaultV2 is Guard {
         rep = new StakeReceiptREP(address(this));
     }
 
+    /// @notice Binds this vault to one published report. Admin-only so nobody can front-run the
+    /// admin and bind the vault to a different report between `publish` and initialization.
     function initializeSeries(uint256 id) external {
+        require(msg.sender == admin, "ADMIN");
         require(reportId == 0 && id != 0, "INITIALIZED");
         ReportRegistry.Report memory r = registry.getReport(id);
         require(r.lockTime > block.timestamp, "REPORT");
@@ -167,6 +171,7 @@ contract RiskFiStakeVaultV2 is Guard {
         );
         require(evidence != 0, "EVIDENCE");
         challenged = true;
+        emit Challenged(msg.sender, evidence);
     }
 
     function adjudicate(Outcome outcome, bytes32 evidence) external {
@@ -177,15 +182,21 @@ contract RiskFiStakeVaultV2 is Guard {
         _finalize(outcome);
     }
 
+    /// @notice Permissionless settlement.
+    /// - An unchallenged proposal settles as proposed once its challenge period has passed, even
+    ///   if that is after `resultDeadline`; calling late must not turn an honest verdict into Void.
+    /// - With no proposal, or with a challenge the adjudicator did not resolve, the report is Void
+    ///   after `resultDeadline`.
     function finalize() external {
-        ReportRegistry.Report memory r = registry.getReport(reportId);
         require(reportId != 0 && finalizedAt == 0, "FINAL");
-        if (block.timestamp > r.resultDeadline) {
-            _finalize(Outcome.Void);
+        ReportRegistry.Report memory r = registry.getReport(reportId);
+        if (proposedAt != 0 && !challenged) {
+            require(block.timestamp >= uint256(proposedAt) + r.challengePeriod, "PENDING");
+            _finalize(proposed);
             return;
         }
-        require(proposedAt != 0 && !challenged && block.timestamp >= uint256(proposedAt) + r.challengePeriod, "PENDING");
-        _finalize(proposed);
+        require(block.timestamp > r.resultDeadline, "PENDING");
+        _finalize(Outcome.Void);
     }
 
     function _finalize(Outcome outcome) internal {

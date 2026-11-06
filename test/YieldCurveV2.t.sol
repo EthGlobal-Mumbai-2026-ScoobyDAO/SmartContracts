@@ -94,6 +94,40 @@ contract YieldCurveV2Test is Test {
         hook.removeLiquidity(hook.shares().balanceOf(address(this)), 0, 0);
     }
 
+    /// Previously a later LP had to hit `byUSDC == byYT` exactly, so any swap between quote and
+    /// deposit reverted with RATIO. Amounts are now maximums and only the proportional part is pulled.
+    function testLaterLPAfterSwapIsChargedProportionally() public {
+        uint256 quote = hook.quoteBuy(1_000_000);
+        vm.prank(ALICE);
+        router.swapExactInput(key, address(usdc) < address(yt), 1_000_000, quote, uint64(block.timestamp + 1 hours));
+
+        uint256 supply = hook.shares().totalSupply();
+        uint256 usdcReserve = hook.usdcReserve();
+        uint256 ytReserve = hook.ytReserve();
+        uint256 maxUSDC = 10_000_000;
+        uint256 maxYT = 400_000_000; // deliberately more YT than the ratio needs
+        usdc.mint(address(this), maxUSDC);
+        uint256 usdcBefore = usdc.balanceOf(address(this));
+        uint256 ytBefore = yt.balanceOf(address(this));
+
+        uint256 expected = maxUSDC * supply / usdcReserve; // USDC is the binding side
+        uint256 minted = hook.addLiquidity(maxUSDC, maxYT, expected);
+        assertEq(minted, expected);
+
+        uint256 usdcCharged = usdcBefore - usdc.balanceOf(address(this));
+        uint256 ytCharged = ytBefore - yt.balanceOf(address(this));
+        assertLe(usdcCharged, maxUSDC);
+        assertLt(ytCharged, maxYT, "excess YT stays with the LP");
+        assertEq(hook.usdcReserve(), usdcReserve + usdcCharged);
+        assertEq(hook.ytReserve(), ytReserve + ytCharged);
+        // Rounded up: the new LP never gets a larger share of either reserve than it paid for.
+        assertGe(usdcCharged * supply, minted * usdcReserve);
+        assertGe(ytCharged * supply, minted * ytReserve);
+
+        vm.expectRevert(bytes("MIN_SHARES"));
+        hook.addLiquidity(1_000, 1_000_000, 1_000_000);
+    }
+
     function testRateBoundaryAndSlippageRevert() public {
         vm.expectRevert();
         hook.quoteSell(100_000_000_000);
