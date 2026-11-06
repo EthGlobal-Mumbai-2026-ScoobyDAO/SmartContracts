@@ -14,7 +14,9 @@
         "explorer": "https://sepolia.etherscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
         "verified": true
       }
-    }
+    },
+    "poolConfigurationTx": "0x8681f2e037592f61067167b56f3b978a5785cdc7608769f67b7a2cf57e1cd62a",
+    "poolActivationTx": "0x5d8ed89470b15cb5856dd1c191d080d3589baca2aabdf81935587d45f8b5c3bb"
   },
   "arbitrumSepolia": {
     "chainId": 421614,
@@ -31,6 +33,8 @@
         "explorer": "https://sepolia.arbiscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
         "verified": true
       }
-    }
+    },
+    "poolConfigurationTx": "0xa633a00c1b1a32791db72e47e1e0883ea1960d37f3f05a2283cf61cdc9c7b03a",
+    "poolActivationTx": "0xad005662e01ceec7853ec5e1bcc83150d8c537e94b1af5c8cec3803767d0b917"
   }
 }
