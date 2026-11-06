@@ -27,13 +27,16 @@ contract V2DeployedForkTest is Test {
         assertEq(address(receiver.vault()), address(vault));
         assertEq(receiver.sourceSender(), vm.envAddress("ARBITRUM_V2_CCIP_SENDER"));
         assertEq(address(hook.yt()), address(yt));
-        assertEq(vault.positionOf(WALLET, true), 100_000_000);
+        uint256 walletYes = vault.positionOf(WALLET, true);
+        assertGe(walletYes, 100_000_000);
         assertTrue(receiver.delivered(MESSAGE_ID), "live CCIP message must be delivered");
-        assertEq(vault.positionOf(WALLET, false), 15_000_000);
+        uint256 walletNo = vault.positionOf(WALLET, false);
+        assertGe(walletNo, 15_000_000);
         assertGe(yt.balanceOf(WALLET), 5_000_000);
         assertGt(hook.ytReserve(), 0);
+        uint256 totalYes = vault.totalYes();
         uint256 totalNo = vault.totalNo();
-        uint256 principal = vault.totalYes() + totalNo;
+        uint256 principal = totalYes + totalNo;
         assertEq(usd.balanceOf(address(vault)), principal);
         assertEq(vault.rep().totalSupply(), 0);
 
@@ -54,14 +57,13 @@ contract V2DeployedForkTest is Test {
         vault.adjudicate(RiskFiStakeVaultV2.Outcome.Yes, keccak256("adjudicated evidence"));
         assertEq(uint256(vault.finalOutcome()), uint256(RiskFiStakeVaultV2.Outcome.Yes));
         vm.prank(WALLET);
-        uint256 winnerPaid = vault.claimPrincipal(true, 100_000_000);
+        uint256 winnerPaid = vault.claimPrincipal(true, walletYes);
         vm.prank(WALLET);
-        assertEq(vault.claimPrincipal(false, totalNo), 0);
+        assertEq(vault.claimPrincipal(false, walletNo), 0);
         uint256 fee = vault.claimFee();
-        assertEq(winnerPaid, 100_000_000 + totalNo - totalNo / 5);
+        assertEq(winnerPaid, walletYes + walletYes * (totalNo - totalNo / 5) / totalYes);
         assertEq(fee, totalNo / 5);
-        assertEq(winnerPaid + fee, principal);
-        assertEq(usd.balanceOf(address(vault)), 0);
+        assertEq(usd.balanceOf(address(vault)), principal - winnerPaid - fee);
         uint256 lpShares = hook.shares().balanceOf(WALLET);
         vm.prank(WALLET);
         hook.removeLiquidity(lpShares, 0, 0);

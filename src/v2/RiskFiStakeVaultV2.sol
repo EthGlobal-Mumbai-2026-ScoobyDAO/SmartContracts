@@ -66,7 +66,12 @@ contract RiskFiStakeVaultV2 is Guard {
         ReportRegistry.Report memory r = registry.getReport(id);
         require(r.lockTime > block.timestamp, "REPORT");
         reportId = id;
-        maturity = uint64(uint256(r.lockTime) + 30 days);
+        uint256 seriesMaturity = registry.maturity(id);
+        require(
+            seriesMaturity > r.lockTime && seriesMaturity > block.timestamp && seriesMaturity <= type(uint64).max,
+            "MATURITY"
+        );
+        maturity = uint64(seriesMaturity);
         yt = new StakerYieldToken(usdc, address(this), maturity);
         emit SeriesInitialized(id, address(yt), maturity);
     }
