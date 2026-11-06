@@ -1,6 +1,6 @@
 # RiskFi smart contracts
 
-Foundry implementation of the [Mumbai build plan](RiskFi_Mumbai_Final_Build_Plan1.md). The repository records contract work in separate dated Git commits. For the two-chain demo, the collateral is **DemoUSD (`dUSD`)**, a six-decimal test token—not Circle USDC or a dollar-backed asset. The vault yield is simulated. No application contract address in this repository is presented as a live deployment.
+Foundry implementation of the [Mumbai build plan](RiskFi_Mumbai_Final_Build_Plan1.md). The repository records contract work in separate dated Git commits. For the two-chain demo, the collateral is **DemoUSD (`dUSD`)**, a six-decimal test token—not Circle USDC or a dollar-backed asset. The vault yield is simulated. The deployed and verified testnet contracts are recorded in [deployments/testnets.json](deployments/testnets.json); no report, YT series, or Uniswap hook pool has been deployed yet.
 
 ## Build and test
 
@@ -43,12 +43,12 @@ The specific sponsor proofs are in [`test/DemoUSD.t.sol`](test/DemoUSD.t.sol), [
 
 ## Deployment gates
 
-The repository has **local proof**, not completed sponsor deployment proof. Before judges can be shown a live integration:
+The token pools, Sepolia core contracts, and Arbitrum sender are deployed and verified. A live funded CCIP vote and Uniswap swap are still outstanding. Before judges can be shown those integrations:
 
-1. The official [Chainlink directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1) lists Arbitrum Sepolia → Ethereum Sepolia as a CCIP 2.0 lane, and `PreflightLane` confirmed `isChainSupported` on the live router. Deploy/register DemoUSD BurnMintTokenPool on both chains, configure each remote token/pool, then run `PreflightSource` to prove a **token + data** `getFee` quote. Configure `CCIPStakeSender`'s per-report cutoff before remote entry.
+1. The official [Chainlink directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1) lists Arbitrum Sepolia → Ethereum Sepolia as a CCIP 2.0 lane. The DemoUSD pools are registered on both chains, and `PreflightSource` returned a live **token + data** `getFee` quote. Publish a reviewed report, configure `CCIPStakeSender`'s per-report cutoff, then demonstrate a funded delivery and destination VPT credit.
 2. Deploy the v4 hook to a mined address with exactly its declared permission flags. Configure the exact PoolKey, then run a buy, sell, LP yield claim and post-maturity withdrawal against Sepolia's deployed PoolManager using the compatible `YieldSwapRouter`. The standard swap-first router path does not prepay input for this hook.
 3. Replace the explicitly simulated vault only after validating a real Sepolia yield market for the exact accepted token, withdrawal behavior and principal loss cases. The mock's injected yield is not lending income; DemoUSD has no independent dollar value or Aave market.
 4. Integrate Agent Pass server verification and World IDKit Proof of Human verification. The contracts validate signed authorizations but cannot themselves prove that a backend checked the World result. Keep backend signing keys off the frontend.
-5. Deploy with user-controlled keys, verify contracts on explorers, run live receipt and swap smoke tests, export addresses/transactions, and submit the Uniswap feedback form. No deployment or feedback submission is claimed here.
+5. Run live receipt and swap smoke tests, export the transaction links, and submit the Uniswap feedback form. The deployed contracts are recorded, but no feedback form submission is claimed here.
 
 The source's `extraArgs` remain caller-supplied because CCIP lane execution settings vary. The receiver uses an authorized recovery operator for malformed messages without a decodable recipient; this is a custodial recovery authority that needs an operational policy before funds are accepted.
