@@ -11,7 +11,7 @@ This is a new, **local-only** implementation of the staker-owned yield design in
 
 ## Regression evidence
 
-Run `set -a; source .env; set +a; forge test --summary` to include live fork checks. At review time, 32 tests passed and none failed. The V2-specific tests cover late mint and transfer accrual, Void and challenged verdicts, principal loss, quote/swap equality, 256 fuzzed buy/sell round trips, time decay without trades, rate bounds, maturity gates, slippage rollback, atomic stake/sell/claim, mined hook deployment, and buy/sell against Sepolia's actual PoolManager in a **local fork**. `forge fmt --check` and `forge build` are separate gates.
+Run `set -a; source .env; set +a; forge test --summary` to include live fork checks. At review time, 30 tests passed and none failed. The V2-specific tests cover late mint and transfer accrual, Void and challenged verdicts, principal loss, quote/swap equality, 256 fuzzed buy/sell round trips, time decay without trades, rate bounds, maturity gates, slippage rollback, atomic stake/sell/claim, mined hook deployment, and buy/sell against Sepolia's actual PoolManager in a **local fork**. `forge fmt --check` and `forge build` are separate gates.
 
 ## Boundaries for review
 

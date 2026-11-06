@@ -1,4 +1,4 @@
-# RiskFi smart contracts
+# SmartContracts
 
 Foundry implementation of the [Mumbai build plan](RiskFi_Mumbai_Final_Build_Plan1.md). The repository records contract work in separate dated Git commits. For the two-chain demo, the collateral is **DemoUSD (`dUSD`)**, a six-decimal test token—not Circle USDC or a dollar-backed asset. The vault yield is simulated. The deployed and verified testnet contracts are recorded in [deployments/testnets.json](deployments/testnets.json); no report, YT series, or Uniswap hook pool has been deployed yet.
 
