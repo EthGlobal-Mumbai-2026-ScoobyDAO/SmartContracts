@@ -14,26 +14,35 @@ contract VoteMarket is Guard {
     address public settlement;
     address public ccipReceiver;
     YieldSplitter public splitter;
+    uint256 public activeReportId;
     mapping(uint256 => bool) public locked;
     mapping(uint256 => uint256[2]) public totals;
     mapping(bytes32 => bool) public creditedMessage;
     mapping(uint256 => uint256) public principalReleased;
     mapping(uint256 => uint256) public principalPaidActual;
     event Staked(uint256 indexed reportId, address indexed recipient, bool yes, uint256 amount, bytes32 messageId);
+
     constructor(IERC20 usdc_, ReportRegistry registry_, VotingPositionToken positions_) {
         require(address(usdc_) != address(0));
-        owner = msg.sender; usdc = usdc_; registry = registry_; positions = positions_;
+        owner = msg.sender;
+        usdc = usdc_;
+        registry = registry_;
+        positions = positions_;
     }
+
     function configure(address settlement_, address ccipReceiver_) external {
         require(msg.sender == owner && settlement == address(0) && ccipReceiver == address(0), "CONFIGURED");
         require(settlement_ != address(0) && ccipReceiver_ != address(0), "ADDRESS");
-        settlement = settlement_; ccipReceiver = ccipReceiver_;
+        settlement = settlement_;
+        ccipReceiver = ccipReceiver_;
     }
+
     function configureSplitter(YieldSplitter splitter_) external {
         require(msg.sender == owner && address(splitter) == address(0), "CONFIGURED");
         require(splitter_.market() == address(this) && address(splitter_.usdc()) == address(usdc), "SPLITTER");
         splitter = splitter_;
     }
+
     function lock(uint256 id) external nonReentrant {
         require(address(splitter) != address(0) && !locked[id], "SPLITTER_OR_LOCKED");
         ReportRegistry.Report memory report = registry.getReport(id);
@@ -44,10 +53,12 @@ contract VoteMarket is Guard {
         usdc.safeApprove(address(splitter), amount);
         splitter.lock(id, amount);
     }
+
     function prepare(uint256 id) external returns (uint256) {
         require(locked[id], "NOT_LOCKED");
         return splitter.preparePrincipal(id);
     }
+
     function stakeLocal(uint256 id, bool yes, uint256 amount, address recipient) external nonReentrant {
         require(amount > 0 && recipient != address(0), "STAKE");
         ReportRegistry.Report memory report = registry.getReport(id);
@@ -57,7 +68,11 @@ contract VoteMarket is Guard {
         require(usdc.balanceOf(address(this)) - beforeBalance == amount, "TOKEN_DELTA");
         _credit(id, yes, amount, recipient, bytes32(0));
     }
-    function creditCCIP(uint256 id, bool yes, uint256 amount, address recipient, bytes32 messageId) external nonReentrant {
+
+    function creditCCIP(uint256 id, bool yes, uint256 amount, address recipient, bytes32 messageId)
+        external
+        nonReentrant
+    {
         require(msg.sender == ccipReceiver && messageId != 0 && !creditedMessage[messageId], "CCIP_AUTH");
         require(recipient != address(0) && amount > 0, "STAKE");
         ReportRegistry.Report memory report = registry.getReport(id);
@@ -68,11 +83,17 @@ contract VoteMarket is Guard {
         creditedMessage[messageId] = true;
         _credit(id, yes, amount, recipient, messageId);
     }
+
     function _credit(uint256 id, bool yes, uint256 amount, address recipient, bytes32 messageId) internal {
+        if (address(splitter) != address(0)) {
+            if (activeReportId == 0) activeReportId = id;
+            else require(activeReportId == id, "ONE_SERIES_ONLY");
+        }
         totals[id][yes ? 1 : 0] += amount;
         positions.mint(recipient, positions.tokenId(id, yes), amount);
         emit Staked(id, recipient, yes, amount, messageId);
     }
+
     function release(uint256 id, address recipient, uint256 amount) external nonReentrant returns (uint256 paid) {
         require(msg.sender == settlement, "SETTLEMENT");
         require(recipient != address(0), "RECIPIENT");
@@ -87,6 +108,7 @@ contract VoteMarket is Guard {
         principalPaidActual[id] += paid;
         usdc.safeTransfer(recipient, paid);
     }
+
     function sweepScaledDust(uint256 id, address recipient) external nonReentrant returns (uint256 paid) {
         require(msg.sender == settlement && address(splitter) != address(0), "SETTLEMENT");
         uint256 totalAmount = totals[id][0] + totals[id][1];
@@ -95,5 +117,8 @@ contract VoteMarket is Guard {
         principalPaidActual[id] += paid;
         if (paid > 0) usdc.safeTransfer(recipient, paid);
     }
-    function total(uint256 id, bool yes) external view returns (uint256) { return totals[id][yes ? 1 : 0]; }
+
+    function total(uint256 id, bool yes) external view returns (uint256) {
+        return totals[id][yes ? 1 : 0];
+    }
 }

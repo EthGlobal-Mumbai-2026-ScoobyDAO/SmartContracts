@@ -11,22 +11,65 @@ contract CCIPStakeSender is Guard {
     IERC20 public immutable sourceUSDC;
     uint64 public immutable destinationSelector;
     address public immutable destinationReceiver;
+    address public immutable owner;
+    mapping(uint256 => uint64) public reportCutoff;
     mapping(address => mapping(uint256 => bool)) public usedNonce;
-    event Sent(bytes32 indexed messageId, address indexed sender, uint256 indexed reportId, address recipient, bool yes, uint256 amount);
+    event Sent(
+        bytes32 indexed messageId,
+        address indexed sender,
+        uint256 indexed reportId,
+        address recipient,
+        bool yes,
+        uint256 amount
+    );
+    event ReportCutoffConfigured(uint256 indexed reportId, uint64 cutoff);
+
     constructor(IRouterClient router_, IERC20 sourceUSDC_, uint64 selector_, address receiver_) {
         require(address(router_) != address(0) && address(sourceUSDC_) != address(0) && receiver_ != address(0));
-        router = router_; sourceUSDC = sourceUSDC_; destinationSelector = selector_; destinationReceiver = receiver_;
+        router = router_;
+        sourceUSDC = sourceUSDC_;
+        destinationSelector = selector_;
+        destinationReceiver = receiver_;
+        owner = msg.sender;
     }
-    function _message(StakeIntent memory intent, uint256 amount, bytes memory extraArgs) internal view returns (Client.EVM2AnyMessage memory m) {
+
+    function configureReportCutoff(uint256 reportId, uint64 cutoff) external {
+        require(msg.sender == owner && reportCutoff[reportId] == 0 && cutoff > block.timestamp, "CUTOFF_CONFIG");
+        reportCutoff[reportId] = cutoff;
+        emit ReportCutoffConfigured(reportId, cutoff);
+    }
+
+    function _message(StakeIntent memory intent, uint256 amount, bytes memory extraArgs)
+        internal
+        view
+        returns (Client.EVM2AnyMessage memory m)
+    {
         Client.EVMTokenAmount[] memory tokens = new Client.EVMTokenAmount[](1);
         tokens[0] = Client.EVMTokenAmount(address(sourceUSDC), amount);
         m = Client.EVM2AnyMessage(abi.encode(destinationReceiver), abi.encode(intent), tokens, address(0), extraArgs);
     }
-    function quoteFee(StakeIntent calldata intent, uint256 amount, bytes calldata extraArgs) external view returns (uint256) {
+
+    function quoteFee(StakeIntent calldata intent, uint256 amount, bytes calldata extraArgs)
+        external
+        view
+        returns (uint256)
+    {
+        require(router.isChainSupported(destinationSelector), "UNSUPPORTED_CHAIN");
         return router.getFee(destinationSelector, _message(intent, amount, extraArgs));
     }
-    function stakeRemote(StakeIntent calldata intent, uint256 amount, bytes calldata extraArgs) external payable nonReentrant returns (bytes32 messageId) {
-        require(intent.protocolVersion == 1 && intent.recipient != address(0) && amount > 0 && amount >= intent.minAmount, "INTENT");
+
+    function stakeRemote(StakeIntent calldata intent, uint256 amount, bytes calldata extraArgs)
+        external
+        payable
+        nonReentrant
+        returns (bytes32 messageId)
+    {
+        require(
+            intent.protocolVersion == 1 && intent.recipient != address(0) && amount > 0 && amount >= intent.minAmount,
+            "INTENT"
+        );
+        require(reportCutoff[intent.reportId] != 0 && block.timestamp < reportCutoff[intent.reportId], "REMOTE_CLOSED");
+        require(router.isChainSupported(destinationSelector), "UNSUPPORTED_CHAIN");
         require(block.timestamp <= intent.deadline && !usedNonce[msg.sender][intent.nonce], "EXPIRED_OR_REPLAY");
         usedNonce[msg.sender][intent.nonce] = true;
         uint256 beforeBalance = sourceUSDC.balanceOf(address(this));
@@ -38,7 +81,10 @@ contract CCIPStakeSender is Guard {
         sourceUSDC.safeApprove(address(router), 0);
         sourceUSDC.safeApprove(address(router), amount);
         messageId = router.ccipSend{value: fee}(destinationSelector, m);
-        if (msg.value > fee) { (bool ok,) = payable(msg.sender).call{value: msg.value - fee}(""); require(ok, "REFUND"); }
+        if (msg.value > fee) {
+            (bool ok,) = payable(msg.sender).call{value: msg.value - fee}("");
+            require(ok, "REFUND");
+        }
         emit Sent(messageId, msg.sender, intent.reportId, intent.recipient, intent.yes, amount);
     }
 }

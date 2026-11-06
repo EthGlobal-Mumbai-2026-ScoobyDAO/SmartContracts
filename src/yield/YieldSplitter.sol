@@ -24,20 +24,31 @@ contract YieldSplitter is Guard {
     event Locked(uint256 indexed reportId, uint256 principal, address yieldToken);
     event YieldCheckpoint(uint256 indexed reportId, uint256 amount);
     event PrincipalPrepared(uint256 indexed reportId, uint256 available);
+
     constructor(IERC20 usdc_, ReportRegistry registry_, address market_, address settlement_, address treasury_) {
-        require(address(usdc_) != address(0) && market_ != address(0) && settlement_ != address(0) && treasury_ != address(0));
-        owner = msg.sender; usdc = usdc_; registry = registry_; market = market_; settlement = settlement_; treasury = treasury_;
+        require(
+            address(usdc_) != address(0) && market_ != address(0) && settlement_ != address(0)
+                && treasury_ != address(0)
+        );
+        owner = msg.sender;
+        usdc = usdc_;
+        registry = registry_;
+        market = market_;
+        settlement = settlement_;
+        treasury = treasury_;
         principalToken = new PrincipalToken(address(this));
     }
+
     function configureVault(YieldVaultAdapter vault_) external {
         require(msg.sender == owner && address(vault) == address(0), "CONFIGURED");
         require(address(vault_.asset()) == address(usdc) && vault_.splitter() == address(this), "VAULT");
         vault = vault_;
     }
+
     function lock(uint256 id, uint256 amount) external nonReentrant {
         require(msg.sender == market && address(vault) != address(0), "MARKET_OR_VAULT");
         ReportRegistry.Report memory r = registry.getReport(id);
-        require(r.lockTime != 0 && block.timestamp >= r.lockTime && block.timestamp < uint256(r.lockTime) + 30 days, "LOCK_TIME");
+        require(r.lockTime != 0 && block.timestamp >= r.lockTime, "LOCK_TIME");
         require(activeReportId == 0 && notional[id] == 0 && amount > 0, "ONE_SERIES_ONLY");
         uint256 beforeBalance = usdc.balanceOf(address(this));
         usdc.safeTransferFrom(msg.sender, address(this), amount);
@@ -52,6 +63,7 @@ contract YieldSplitter is Guard {
         vault.deposit(amount);
         emit Locked(id, amount, address(yt));
     }
+
     function checkpointYield(uint256 id) public nonReentrant returns (uint256 amount) {
         require(notional[id] != 0 && !prepared[id], "SERIES");
         amount = vault.positiveYield();
@@ -62,6 +74,7 @@ contract YieldSplitter is Guard {
             emit YieldCheckpoint(id, amount);
         }
     }
+
     function preparePrincipal(uint256 id) external nonReentrant returns (uint256 available) {
         require(msg.sender == market && notional[id] != 0 && !prepared[id], "PREPARE");
         require(block.timestamp >= registry.maturity(id), "MATURITY");

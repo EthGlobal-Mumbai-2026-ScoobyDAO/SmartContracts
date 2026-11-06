@@ -20,9 +20,15 @@ contract ReportRegistry {
     mapping(address => mapping(uint256 => bool)) public usedNonce;
     event Published(uint256 indexed reportId, bytes32 reportHash, bytes32 claimHash, address reviewer);
 
-    constructor(address publisher_) { require(publisher_ != address(0)); publisher = publisher_; }
+    constructor(address publisher_) {
+        require(publisher_ != address(0));
+        publisher = publisher_;
+    }
 
-    function publish(Report calldata report, uint256 nonce, uint64 approvalExpiry, bytes calldata approval) external returns (uint256 id) {
+    function publish(Report calldata report, uint256 nonce, uint64 approvalExpiry, bytes calldata approval)
+        external
+        returns (uint256 id)
+    {
         require(msg.sender == publisher, "PUBLISHER");
         require(report.reportHash != 0 && report.claimHash != 0 && report.reviewer != address(0), "HASH_OR_REVIEWER");
         require(report.resolver != address(0) && report.adjudicator != address(0), "AUTHORITY");
@@ -37,8 +43,14 @@ contract ReportRegistry {
         emit Published(id, report.reportHash, report.claimHash, report.reviewer);
     }
 
-    function getReport(uint256 id) external view returns (Report memory) { return reports[id]; }
-    function maturity(uint256 id) external view returns (uint256) { return uint256(reports[id].lockTime) + 30 days; }
+    function getReport(uint256 id) external view returns (Report memory) {
+        return reports[id];
+    }
+
+    function maturity(uint256 id) external view returns (uint256) {
+        return uint256(reports[id].lockTime) + 30 days;
+    }
+
     function approvalDigest(Report calldata report, uint256 nonce, uint64 expiry) external view returns (bytes32) {
         return Sig.ethSigned(keccak256(abi.encode(block.chainid, address(this), report, nonce, expiry)));
     }
