@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 import {IERC20, SafeToken, Guard} from "./Utils.sol";
 import {ReportRegistry} from "./ReportRegistry.sol";
 import {VotingPositionToken} from "./VotingPositionToken.sol";
+import {YieldSplitter} from "./yield/YieldSplitter.sol";
 
 contract VoteMarket is Guard {
     using SafeToken for IERC20;
@@ -12,9 +13,12 @@ contract VoteMarket is Guard {
     address public immutable owner;
     address public settlement;
     address public ccipReceiver;
+    YieldSplitter public splitter;
+    mapping(uint256 => bool) public locked;
     mapping(uint256 => uint256[2]) public totals;
     mapping(bytes32 => bool) public creditedMessage;
     mapping(uint256 => uint256) public principalReleased;
+    mapping(uint256 => uint256) public principalPaidActual;
     event Staked(uint256 indexed reportId, address indexed recipient, bool yes, uint256 amount, bytes32 messageId);
     constructor(IERC20 usdc_, ReportRegistry registry_, VotingPositionToken positions_) {
         require(address(usdc_) != address(0));
@@ -24,6 +28,25 @@ contract VoteMarket is Guard {
         require(msg.sender == owner && settlement == address(0) && ccipReceiver == address(0), "CONFIGURED");
         require(settlement_ != address(0) && ccipReceiver_ != address(0), "ADDRESS");
         settlement = settlement_; ccipReceiver = ccipReceiver_;
+    }
+    function configureSplitter(YieldSplitter splitter_) external {
+        require(msg.sender == owner && address(splitter) == address(0), "CONFIGURED");
+        require(splitter_.market() == address(this) && address(splitter_.usdc()) == address(usdc), "SPLITTER");
+        splitter = splitter_;
+    }
+    function lock(uint256 id) external nonReentrant {
+        require(address(splitter) != address(0) && !locked[id], "SPLITTER_OR_LOCKED");
+        ReportRegistry.Report memory report = registry.getReport(id);
+        require(report.lockTime != 0 && block.timestamp >= report.lockTime, "LOCK_TIME");
+        uint256 amount = totals[id][0] + totals[id][1];
+        require(amount > 0, "EMPTY");
+        locked[id] = true;
+        usdc.safeApprove(address(splitter), amount);
+        splitter.lock(id, amount);
+    }
+    function prepare(uint256 id) external returns (uint256) {
+        require(locked[id], "NOT_LOCKED");
+        return splitter.preparePrincipal(id);
     }
     function stakeLocal(uint256 id, bool yes, uint256 amount, address recipient) external nonReentrant {
         require(amount > 0 && recipient != address(0), "STAKE");
@@ -50,13 +73,27 @@ contract VoteMarket is Guard {
         positions.mint(recipient, positions.tokenId(id, yes), amount);
         emit Staked(id, recipient, yes, amount, messageId);
     }
-    function release(uint256 id, address recipient, uint256 amount) external nonReentrant {
+    function release(uint256 id, address recipient, uint256 amount) external nonReentrant returns (uint256 paid) {
         require(msg.sender == settlement, "SETTLEMENT");
         require(recipient != address(0), "RECIPIENT");
         uint256 total = totals[id][0] + totals[id][1];
         principalReleased[id] += amount;
         require(principalReleased[id] <= total, "INSOLVENT");
-        usdc.safeTransfer(recipient, amount);
+        paid = amount;
+        if (address(splitter) != address(0)) {
+            require(locked[id] && splitter.prepared(id), "NOT_PREPARED");
+            paid = amount * splitter.principalAvailable(id) / total;
+        }
+        principalPaidActual[id] += paid;
+        usdc.safeTransfer(recipient, paid);
+    }
+    function sweepScaledDust(uint256 id, address recipient) external nonReentrant returns (uint256 paid) {
+        require(msg.sender == settlement && address(splitter) != address(0), "SETTLEMENT");
+        uint256 totalAmount = totals[id][0] + totals[id][1];
+        require(principalReleased[id] == totalAmount, "NOMINAL_OUTSTANDING");
+        paid = splitter.principalAvailable(id) - principalPaidActual[id];
+        principalPaidActual[id] += paid;
+        if (paid > 0) usdc.safeTransfer(recipient, paid);
     }
     function total(uint256 id, bool yes) external view returns (uint256) { return totals[id][yes ? 1 : 0]; }
 }

@@ -61,6 +61,7 @@ contract Settlement is Guard {
         if (yes == 0 || no == 0) outcome = Outcome.Void;
         Decision storage d = decisions[id];
         d.finalOutcome = outcome; d.finalizedAt = uint64(block.timestamp);
+        if (address(market.splitter()) != address(0)) market.prepare(id);
         emit Finalized(id, outcome);
     }
     function redeemVPT(uint256 id, bool yes, uint256 amount) external nonReentrant returns (uint256 payout) {
@@ -75,7 +76,7 @@ contract Settlement is Guard {
         positions.burn(msg.sender, positions.tokenId(id, yes), amount);
         if (payout > 0 && outcome != Outcome.Void) winningPrincipalRedeemed[id][msg.sender] += amount;
         claimed[id] += payout;
-        if (payout > 0) market.release(id, msg.sender, payout);
+        if (payout > 0) payout = market.release(id, msg.sender, payout);
         emit Redeemed(id, msg.sender, yes, amount, payout);
     }
     function eligibleWinner(uint256 id, address account) external view returns (bool) {
@@ -100,5 +101,6 @@ contract Settlement is Guard {
         uint256 remaining = total - market.principalReleased(id);
         require(remaining > 0, "NO_DUST");
         market.release(id, treasury, remaining);
+        if (address(market.splitter()) != address(0)) market.sweepScaledDust(id, treasury);
     }
 }
