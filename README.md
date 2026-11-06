@@ -20,9 +20,9 @@ The dependencies live under ignored `lib/`. The source imports the official [Cha
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ethereum Sepolia and Arbitrum Sepolia sequence, `.env` fields, CCIP pool registration, and explorer verification.
 
-The new staker-owned PT/YT and time-aware Uniswap design is implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
+The new staker-owned PT/YT, time-aware Uniswap design, and Chainlink CCIP funded-vote route are implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
 
-End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters, YT market, yield, and verdict) and [`CCIP.t.sol`](test/CCIP.t.sol) (eight V1 voters including one mock CCIP-funded vote, then settlement and REP).
+End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and recovery cases), and [`CCIP.t.sol`](test/CCIP.t.sol) (V1 workflow).
 
 ## Contract map
 

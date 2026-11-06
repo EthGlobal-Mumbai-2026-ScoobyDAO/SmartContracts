@@ -132,4 +132,21 @@ contract CCIPV2Test is Test {
         receiver.recover(malformed.messageId, TREASURY);
         assertEq(usdc.balanceOf(TREASURY), 1_000_000);
     }
+
+    function testOnlyRouterMayDeliverAndMessageCannotReplay() public {
+        vm.prank(ALICE);
+        sender.stakeRemote(_intent(ALICE, ALICE, 11), 1_000_000, "");
+        bytes32 messageId = keccak256(abi.encode(uint256(1), address(sender)));
+        Client.EVMTokenAmount[] memory tokens = new Client.EVMTokenAmount[](1);
+        tokens[0] = Client.EVMTokenAmount(address(usdc), 1_000_000);
+        Client.Any2EVMMessage memory replay = Client.Any2EVMMessage(
+            messageId, router.SOURCE(), abi.encode(address(sender)), abi.encode(_intent(ALICE, ALICE, 11)), tokens
+        );
+        vm.expectRevert();
+        receiver.ccipReceive(replay);
+        vm.expectRevert(bytes("REPLAY"));
+        vm.prank(address(router));
+        receiver.ccipReceive(replay);
+        assertEq(vault.positionOf(ALICE, true), 1_000_000);
+    }
 }
