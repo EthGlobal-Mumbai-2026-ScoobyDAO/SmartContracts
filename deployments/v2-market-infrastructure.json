@@ -1,0 +1,12 @@
+{
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "seriesFactory": { "address": "0xc5895A4C15E1e9e3e7fdAa56e8cDC60c8465C61a", "deploymentTx": "0xdebc6a73684c9478b9587d3aa651dac98d1498dd9fdb9570500a354aca25ec15", "verified": true },
+    "poolCatalog": { "address": "0xf1e4F220F7b537e9270D52eb32db6105271F11B9", "deploymentTx": "0x50d8339f46e29da6d6b57d4458b71f605f8a28ac11c1d1117e1f3d469468b7a3", "verified": true },
+    "hookSaltFinder": { "address": "0x8Ae0e98B661f89A06BCE49C4155E3b272D63d7bf", "deploymentTx": "0x8fefded74325ce023bb7278f2c3480294a63dcc47225cd4b10f124ee4017c78c", "verified": true }
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "ccipSenderFactory": { "address": "0x116d26F06bC7455C63A45D832586ea8F9Ac29B41", "deploymentTx": "0xad186e2de8d435347d9d71478f483f3602c73c759717a3a6d51d35cadcec24f6", "verified": true }
+  }
+}
