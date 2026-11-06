@@ -26,19 +26,19 @@ The [developer feedback file](FEEDBACK.md) describes the implementation challeng
 
 | What to inspect | Exact implementation | Test |
 |---|---|---|
-| V2 time-aware rate curve and matching quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L123), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L138) | [Quote/swap parity and rate changes](test/YieldCurveV2.t.sol#L60) |
-| Actual v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L254), [input-first `YieldSwapRouter`](src/uniswap/YieldSwapRouter.sol#L47) | [Local fork of Sepolia's PoolManager](test/V2LivePoolFork.t.sol#L52) |
+| V2 time-aware rate curve and matching quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L124), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L139) | [Quote/swap parity and rate changes](test/YieldCurveV2.t.sol#L60) |
+| Actual v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L270), [input-first `YieldSwapRouter`](src/uniswap/YieldSwapRouter.sol#L47) | [Local V2 swap test](test/YieldCurveV2.t.sol#L60) |
 | Permission-bit hook creation and pool initialization | [`deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Mined hook test](test/YieldCurveV2.t.sol#L124) |
-| LP-owned liquidity and YT yield accounting | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L172), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L222) | [Eight-voter workflow](test/EightVoterWorkflowV2.t.sol#L147) |
+| LP-owned liquidity and YT yield accounting | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Eight-voter workflow](test/EightVoterWorkflowV2.t.sol#L160) |
 | Stake and sell newly minted YT atomically | [`stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Atomic execution and rollback](test/StakeAndSellV2.t.sol#L85) |
 
-V2 has passed local tests, including a fork that uses Sepolia's deployed PoolManager. The V2 hook, router, and pool are **not deployed**; no live V2 swap or feedback-form submission is claimed.
+All 25 V2-only local tests pass. The separate Sepolia PoolManager fork test is currently blocked by a public RPC error. The V2 hook, router, and pool are **not deployed**; no live V2 swap or feedback-form submission is claimed.
 
 The active demo flow is V2: REP deposit, staker-owned YT, time-aware Uniswap market, and Chainlink CCIP funded vote. It is implemented under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). Run the [V2-only end-to-end test](V2_E2E.md) with `forge test --match-path 'test/*V2.t.sol' --summary`. V2 is local-only pending review; the deployed V1 contracts have not been replaced.
 
-End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and recovery cases), and [`CCIP.t.sol`](test/CCIP.t.sol) (V1 workflow).
+The active end-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, REP, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and deferred REP cases), and [`RepReceiptV2.t.sol`](test/RepReceiptV2.t.sol) (REP backing and withdrawal).
 
-## Contract map
+## Legacy V1 contract map (not used in the V2 demo)
 
 | Area | Contracts | What the tests establish |
 |---|---|---|
