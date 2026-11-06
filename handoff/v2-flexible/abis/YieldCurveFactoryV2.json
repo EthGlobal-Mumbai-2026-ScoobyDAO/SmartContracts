@@ -1,0 +1,115 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "owner_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployAndInitialize",
+    "inputs": [
+      {
+        "name": "manager",
+        "type": "address",
+        "internalType": "contract IPoolManager"
+      },
+      {
+        "name": "usdc",
+        "type": "address",
+        "internalType": "contract IERC20"
+      },
+      {
+        "name": "yt",
+        "type": "address",
+        "internalType": "contract StakerYieldToken"
+      },
+      {
+        "name": "maturity",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "feePips",
+        "type": "uint24",
+        "internalType": "uint24"
+      },
+      {
+        "name": "anchorRateWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "slopeWadPerUnit",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minRateWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxRateWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hook",
+        "type": "address",
+        "internalType": "contract YieldCurveHookV2"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "HookDeployed",
+    "inputs": [
+      {
+        "name": "hook",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "yt",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  }
+]

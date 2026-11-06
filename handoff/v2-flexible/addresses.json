@@ -1,0 +1,65 @@
+{
+  "version": "riskfi-v2-flexible-demo-1",
+  "source": "deployments/v2-flexible-prepared.json",
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "chainSelector": "16015286601757825753",
+    "reportId": 1,
+    "reportTimes": {
+      "crossChainCutoff": 1793983644,
+      "lockTime": 1793983944,
+      "maturity": 1793986344
+    },
+    "contracts": {
+      "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+      "BurnMintTokenPool": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+      "ReportRegistry": "0xe983eb98b00e9c26179202b69393d97981794447",
+      "RiskFiStakeVaultV2": "0x152ba69f4603c22b5f15c87fc6b25fcb7d5bb2e7",
+      "StakeReceiptREP": "0x9Be44465edbDB4635A8a9b8EBe953Dc69f43f846",
+      "CCIPStakeReceiverV2": "0xeb367823d9aaf02820e60a7d5846d32d67d34f2b",
+      "StakerYieldToken": "0x09f64D57f16254903784bD6002624beA91f00793",
+      "YieldCurveFactoryV2": "0xe6932060c8ace4adc7556d6f9d61e3fd800c354f",
+      "YieldCurveHookV2": "0xB0C529B3E0FD8dBbe460a80654F3C2eab2632a88",
+      "YieldLPShare": "0x07F5b12dEB01BEa58a700715D6B56a30024155eD",
+      "YieldSwapRouter": "0x2B272b404e82f16ad7AcAdC8fD2c12329876CEC1",
+      "StakeAndSellRouterV2": "0xF399Bec275026ebE2ec46A5468B1dd004723e22f",
+      "PoolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+      "CCIPRouter": "0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59"
+    },
+    "ytPoolKey": {
+      "currency0": "0x09f64D57f16254903784bD6002624beA91f00793",
+      "currency1": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+      "fee": 0,
+      "tickSpacing": 1,
+      "hooks": "0xB0C529B3E0FD8dBbe460a80654F3C2eab2632a88"
+    },
+    "poolKeyHash": "0xc18f27d4ab0b580ef3fc62d5f983ca111511101415be135893b9f90a08bf7e96",
+    "report": {
+      "reportId": 1,
+      "reportHash": "0xc734badb08334f9227993ef03ce203097e4cf1282052531bfbbd090bf07975ce",
+      "claimHash": "0xd62675a4812a65acb44e750f3bd416f95c17753af362fc3b4c298661bb2a24ec",
+      "reviewer": "0xd561d3e95a02fDD8DbC94d15BFBF1b1634234b3a",
+      "resolver": "0xd561d3e95a02fDD8DbC94d15BFBF1b1634234b3a",
+      "adjudicator": "0xd561d3e95a02fDD8DbC94d15BFBF1b1634234b3a",
+      "resultDeadline": 1793986944,
+      "challengePeriodSeconds": 300
+    }
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "chainSelector": "3478487238524512106",
+    "destinationSelector": "16015286601757825753",
+    "reportId": 1,
+    "contracts": {
+      "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+      "BurnMintTokenPool": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+      "CCIPStakeSenderV2": "0x41afd00b58646319028a1ceec7149da17a34f60e",
+      "CCIPRouter": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165"
+    }
+  },
+  "exampleCCIP": {
+    "messageId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "sourceTx": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "destinationTx": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

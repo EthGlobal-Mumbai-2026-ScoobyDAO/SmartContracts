@@ -1,0 +1,67 @@
+{
+  "BurnMintTokenPool": {
+    "file": "abis/BurnMintTokenPool.json",
+    "entries": 87,
+    "sha256": "82089e568e6e01a662eaf21a7c89a81d9c5ebc0bbfe654e4d05e95420e3a39cd"
+  },
+  "CCIPStakeReceiverV2": {
+    "file": "abis/CCIPStakeReceiverV2.json",
+    "entries": 23,
+    "sha256": "7b90bd70c6cb0495bd8503dcd18aa24aad846d4af9a391c550a9182a9c5937c2"
+  },
+  "CCIPStakeSenderV2": {
+    "file": "abis/CCIPStakeSenderV2.json",
+    "entries": 14,
+    "sha256": "a748341d814ce6799cf51a4627a3e12651b22177ade440ec86e64b1d00f4bf9c"
+  },
+  "DemoUSD": {
+    "file": "abis/DemoUSD.json",
+    "entries": 37,
+    "sha256": "9e69486e3d30d3425edfb186e064421c063e122bea9c32993572fd255c767a31"
+  },
+  "ReportRegistry": {
+    "file": "abis/ReportRegistry.json",
+    "entries": 12,
+    "sha256": "763aaf9f160ad9bcefdb852ddbff94e077e864f8795e6a4344c57fe3ce80a017"
+  },
+  "RiskFiStakeVaultV2": {
+    "file": "abis/RiskFiStakeVaultV2.json",
+    "entries": 46,
+    "sha256": "a1d12ceea94a30721539b7bec791d68ac64b499deab74cc85b79046e405d3e5d"
+  },
+  "StakeAndSellRouterV2": {
+    "file": "abis/StakeAndSellRouterV2.json",
+    "entries": 11,
+    "sha256": "a94ed6e0bdaa649e3d8da2d3a1e1a9df06b1a59aa9d6c52108f8de234fd574a5"
+  },
+  "StakeReceiptREP": {
+    "file": "abis/StakeReceiptREP.json",
+    "entries": 15,
+    "sha256": "884a4fe15b6c53a56effc4c37218fe30533a811c1285076312546718166442cf"
+  },
+  "StakerYieldToken": {
+    "file": "abis/StakerYieldToken.json",
+    "entries": 29,
+    "sha256": "50d89562055832029a583939a2d29ccaaa97f7b355913f207a5af688125d4bb6"
+  },
+  "YieldCurveFactoryV2": {
+    "file": "abis/YieldCurveFactoryV2.json",
+    "entries": 4,
+    "sha256": "cadc657e31c7e2c9b64ec457bd2bf2e94e30a7bd82720c5c4253d11aa0dd665c"
+  },
+  "YieldCurveHookV2": {
+    "file": "abis/YieldCurveHookV2.json",
+    "entries": 43,
+    "sha256": "69c529a8ec2b1b74e73a6319b8482d5ddc6b7fcbb6af7ffb4088e07a9fdba207"
+  },
+  "YieldLPShare": {
+    "file": "abis/YieldLPShare.json",
+    "entries": 15,
+    "sha256": "137618c27b53f6fa4bc640265897d5b3d4baeaf33982364f567b2d675ce9b203"
+  },
+  "YieldSwapRouter": {
+    "file": "abis/YieldSwapRouter.json",
+    "entries": 5,
+    "sha256": "893c3bc56581cf9b8c532b297df8480aae43a5053885d0fe6583e2ced9f2ecb2"
+  }
+}
