@@ -22,6 +22,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ethereum Sepolia and Arbitrum Sepolia
 
 The new staker-owned PT/YT and time-aware Uniswap design is implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
 
+End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters, YT market, yield, and verdict) and [`CCIP.t.sol`](test/CCIP.t.sol) (eight V1 voters including one mock CCIP-funded vote, then settlement and REP).
+
 ## Contract map
 
 | Area | Contracts | What the tests establish |
