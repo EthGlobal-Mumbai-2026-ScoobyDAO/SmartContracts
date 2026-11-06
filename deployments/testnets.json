@@ -1,0 +1,36 @@
+{
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "contracts": {
+      "DemoUSD": {
+        "address": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+        "deploymentTx": "0xeda54cca80cd8adfb5fddd41e74d2c29b60876c9da18a72507e2e43719a86a1c",
+        "explorer": "https://sepolia.etherscan.io/address/0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+        "verified": true
+      },
+      "BurnMintTokenPool": {
+        "address": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+        "deploymentTx": "0x5f65df42042d265c4de66a2e57c8232cad2b62d58496aabda7487b827b81625f",
+        "explorer": "https://sepolia.etherscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+        "verified": true
+      }
+    }
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "contracts": {
+      "DemoUSD": {
+        "address": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+        "deploymentTx": "0x15a67b0347304e07fbf7832f8b1706234eb12907fe48aed9c1926c975a6e6e46",
+        "explorer": "https://sepolia.arbiscan.io/address/0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+        "verified": true
+      },
+      "BurnMintTokenPool": {
+        "address": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+        "deploymentTx": "0x49dff7a5232bec05a232aab99bec20de0ee8d55522d181a42c40ad810508dee7",
+        "explorer": "https://sepolia.arbiscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+        "verified": true
+      }
+    }
+  }
+}
