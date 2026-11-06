@@ -3,11 +3,15 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {MockUSDC} from "./Voting.t.sol";
+import {MockCCIPRouter} from "./CCIP.t.sol";
 import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {RiskFiStakeVaultV2} from "../src/v2/RiskFiStakeVaultV2.sol";
 import {StakerYieldToken} from "../src/v2/StakerYieldToken.sol";
 import {YieldCurveHookV2} from "../src/v2/YieldCurveHookV2.sol";
 import {StakeAndSellRouterV2} from "../src/v2/StakeAndSellRouterV2.sol";
+import {CCIPStakeSenderV2} from "../src/v2/CCIPStakeSenderV2.sol";
+import {CCIPStakeReceiverV2} from "../src/v2/CCIPStakeReceiverV2.sol";
+import {StakeIntentV2} from "../src/v2/StakeIntentV2.sol";
 import {YieldSwapRouter} from "../src/uniswap/YieldSwapRouter.sol";
 import {PoolManager} from "v4-core/PoolManager.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
@@ -36,6 +40,9 @@ contract EightVoterWorkflowV2Test is Test {
     YieldCurveHookV2 hook;
     YieldSwapRouter swapRouter;
     StakeAndSellRouterV2 atomicRouter;
+    MockCCIPRouter ccipRouter;
+    CCIPStakeSenderV2 ccipSender;
+    CCIPStakeReceiverV2 ccipReceiver;
     PoolKey key;
     uint256 reportId;
     uint64 lockTime;
@@ -76,6 +83,11 @@ contract EightVoterWorkflowV2Test is Test {
         manager.initialize(key, 1 << 96);
         swapRouter = new YieldSwapRouter(IPoolManager(address(manager)));
         atomicRouter = new StakeAndSellRouterV2(vault, hook, swapRouter, key);
+        ccipRouter = new MockCCIPRouter();
+        ccipReceiver = new CCIPStakeReceiverV2(address(ccipRouter), ccipRouter.SOURCE(), usdc, vault, address(this));
+        ccipSender = new CCIPStakeSenderV2(ccipRouter, usdc, 98765, address(ccipReceiver));
+        ccipReceiver.configureSourceSender(address(ccipSender));
+        ccipSender.configureReportCutoff(reportId, uint64(lockTime - 1 days));
 
         _fundVoter(ALICE, 81_000_000);
         _fundVoter(BOB, 40_000_000);
@@ -95,6 +107,7 @@ contract EightVoterWorkflowV2Test is Test {
         usdc.approve(address(vault), type(uint256).max);
         usdc.approve(address(atomicRouter), type(uint256).max);
         usdc.approve(address(swapRouter), type(uint256).max);
+        usdc.approve(address(ccipSender), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -120,6 +133,17 @@ contract EightVoterWorkflowV2Test is Test {
         amount = yt.claimYield();
     }
 
+    function _remoteKeep(address person, bool yes, uint256 amount) internal {
+        StakeIntentV2 memory intent =
+            StakeIntentV2(2, reportId, yes, person, person, 9, uint64(lockTime + 1 days), amount);
+        vm.prank(person);
+        bytes32 messageId = ccipSender.stakeRemote(intent, amount, "");
+        assertTrue(ccipReceiver.delivered(messageId));
+        assertEq(ccipReceiver.recoverable(messageId), 0);
+        assertEq(vault.positionOf(person, yes), amount);
+        assertEq(yt.balanceOf(person), amount);
+    }
+
     function testEightVotersFromApprovalThroughYieldTradingAndVerdict() public {
         // Carol stakes first and contributes her YT plus separate dUSD liquidity.
         _keep(CAROL, true, 30_000_000);
@@ -135,7 +159,7 @@ contract EightVoterWorkflowV2Test is Test {
         _sellOnStake(EVE, true, 20_000_000);
         _keep(FRANK, false, 15_000_000);
         _keep(GRACE, true, 10_000_000);
-        _keep(HEIDI, true, 5_000_000);
+        _remoteKeep(HEIDI, true, 5_000_000);
         assertEq(vault.totalYes(), 145_000_000);
         assertEq(vault.totalNo(), 75_000_000);
         assertEq(yt.totalSupply(), 220_000_000);
@@ -238,5 +262,27 @@ contract EightVoterWorkflowV2Test is Test {
             + usdc.balanceOf(TREASURY) + usdc.balanceOf(address(hook)) + usdc.balanceOf(address(yt))
             + usdc.balanceOf(address(this));
         assertEq(accounted, 264_000_000, "all 231 dUSD collateral/liquidity and 33 dUSD simulated yield accounted");
+    }
+
+    function testCCIPFundedV2YTCanTradeOnUniswap() public {
+        _keep(CAROL, true, 30_000_000);
+        vm.startPrank(CAROL);
+        usdc.approve(address(hook), type(uint256).max);
+        yt.approve(address(hook), type(uint256).max);
+        hook.addLiquidity(10_000_000, 30_000_000, 1);
+        vm.stopPrank();
+        _remoteKeep(HEIDI, true, 5_000_000);
+        uint256 quote = hook.quoteSell(5_000_000);
+        vm.startPrank(HEIDI);
+        yt.approve(address(swapRouter), 5_000_000);
+        uint256 proceeds = swapRouter.swapExactInput(
+            key, address(yt) < address(usdc), 5_000_000, quote, uint64(block.timestamp + 1 hours)
+        );
+        vm.stopPrank();
+        assertEq(proceeds, quote);
+        assertEq(yt.balanceOf(HEIDI), 0);
+        assertEq(vault.positionOf(HEIDI, true), 5_000_000);
+        assertEq(usdc.balanceOf(HEIDI), proceeds);
+        assertEq(usdc.balanceOf(address(vault)), 35_000_000);
     }
 }
