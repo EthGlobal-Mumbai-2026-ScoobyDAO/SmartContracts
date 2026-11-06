@@ -6,6 +6,8 @@ This deployment targets **Ethereum Sepolia** for the market, vault, settlement, 
 
 `.env.example` records the public addresses from the [Chainlink CCIP directory for Ethereum Sepolia](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia), the [Arbitrum Sepolia directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1), and [Uniswap's Sepolia deployments](https://developers.uniswap.org/docs/protocols/v4/deployments). Recheck them before broadcast. `.env` is Git-ignored. Put the funded deployer key there; keep it out of chat, logs, frontend code, and Git.
 
+Create one key in the [Etherscan API dashboard](https://etherscan.io/apidashboard) and set `ETHERSCAN_API_KEY` in `.env`. Etherscan API V2 uses that key for both Ethereum Sepolia and Arbitrum Sepolia; a separate Arbiscan key is unnecessary. See [Etherscan's key setup guide](https://docs.etherscan.io/set-up-your-api-key).
+
 ```sh
 set -a
 source .env
@@ -24,7 +26,7 @@ The same script deploys Chainlink's `BurnMintERC20` derivative and `BurnMintToke
 
 ```sh
 forge script script/DeployDemoUSD.s.sol:DeployDemoUSD --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-forge script script/DeployDemoUSD.s.sol:DeployDemoUSD --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ARBISCAN_API_KEY" -vv
+forge script script/DeployDemoUSD.s.sol:DeployDemoUSD --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
 ```
 
 Record the two `DemoUSD` and `BurnMintTokenPool` addresses as `SEPOLIA_DEMO_USD`, `SEPOLIA_DEMO_POOL`, `ARBITRUM_DEMO_USD`, and `ARBITRUM_DEMO_POOL` in `.env`. Both token contracts are separate deployments linked by CCIP pool configuration.
@@ -52,7 +54,7 @@ Record `CCIPReceiver`, `Splitter`, `Treasury`, and the other printed addresses. 
 
 ```sh
 set -a; source .env; set +a
-forge script script/DeploySource.s.sol:DeploySource --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ARBISCAN_API_KEY" -vv
+forge script script/DeploySource.s.sol:DeploySource --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
 ```
 
 Record `CCIPSender` in `ARBITRUM_CCIP_SENDER`, then allowlist it on Ethereum Sepolia:
