@@ -1,0 +1,105 @@
+{
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "sharedCCIPToken": {
+      "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+      "BurnMintTokenPool": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087"
+    },
+    "v2Contracts": {
+      "ReportRegistry": {
+        "address": "0x805d681383f580403b979bf1d017cff045dc7ebd",
+        "deploymentTx": "0x7a1df17d084990f3a437f712732e23cac66cbfa4f26cd1665923562cd9613db8",
+        "explorer": "https://sepolia.etherscan.io/address/0x805d681383f580403b979bf1d017cff045dc7ebd",
+        "verified": true
+      },
+      "RiskFiStakeVaultV2": {
+        "address": "0x8a4ea6695a23796943d77e4e969a3b1a96747b42",
+        "deploymentTx": "0xd6cea49b62d2300cb87abb91d6ec84339886d5561fa53739bf02cb5673829927",
+        "explorer": "https://sepolia.etherscan.io/address/0x8a4ea6695a23796943d77e4e969a3b1a96747b42",
+        "verified": true
+      },
+      "StakeReceiptREP": {
+        "address": "0xa1dcc460b0a24e38d811b39200ad830bf0116b93",
+        "deploymentTx": "0xd6cea49b62d2300cb87abb91d6ec84339886d5561fa53739bf02cb5673829927",
+        "explorer": "https://sepolia.etherscan.io/address/0xa1dcc460b0a24e38d811b39200ad830bf0116b93",
+        "verified": true
+      },
+      "CCIPStakeReceiverV2": {
+        "address": "0x781bb600198d7953348a03545342949b2ffc7d14",
+        "deploymentTx": "0xd5e4a61096543441b628abb701b185e1284e8b69bd2d62a0c79f8f032e584bba",
+        "explorer": "https://sepolia.etherscan.io/address/0x781bb600198d7953348a03545342949b2ffc7d14",
+        "verified": true
+      },
+      "StakerYieldToken": {
+        "address": "0x74299ca16920614f295f9bb186e7e506937609c3",
+        "deploymentTx": "0x83e066eb19dda2e30f54d3114a360ade498f53d87bd74e6ed38185c8c03f480f",
+        "explorer": "https://sepolia.etherscan.io/address/0x74299ca16920614f295f9bb186e7e506937609c3",
+        "verified": true
+      },
+      "YieldCurveFactoryV2": {
+        "address": "0xe6932060c8ace4adc7556d6f9d61e3fd800c354f",
+        "deploymentTx": "0x8487e356278437e4c6d9ab4f8685fbe5db5e32dfc0b16cec18fd90c0b58a1802",
+        "explorer": "https://sepolia.etherscan.io/address/0xe6932060c8ace4adc7556d6f9d61e3fd800c354f",
+        "verified": true
+      },
+      "YieldCurveHookV2": {
+        "address": "0x372ad337dd8934b498368e8aede6b088c1f2ea88",
+        "deploymentTx": "0x61b15809af0f0af4af23e099afe327c76fc6c6c2afdf3b35c8c896798fa7808c",
+        "explorer": "https://sepolia.etherscan.io/address/0x372ad337dd8934b498368e8aede6b088c1f2ea88",
+        "verified": true
+      },
+      "YieldLPShare": {
+        "address": "0x260db07009d8ccc053847911f6d7fbf4cbae85a3",
+        "deploymentTx": "0x61b15809af0f0af4af23e099afe327c76fc6c6c2afdf3b35c8c896798fa7808c",
+        "explorer": "https://sepolia.etherscan.io/address/0x260db07009d8ccc053847911f6d7fbf4cbae85a3",
+        "verified": true
+      },
+      "YieldSwapRouter": {
+        "address": "0x6ef1924db2105128534eaf579278210a586de8c5",
+        "deploymentTx": "0xc85c657725fe7e0404854d08602331fc4adffae6bc7656af03c2ae4493089400",
+        "explorer": "https://sepolia.etherscan.io/address/0x6ef1924db2105128534eaf579278210a586de8c5",
+        "verified": true
+      },
+      "StakeAndSellRouterV2": {
+        "address": "0x16696a55578308b95d6b9597accbf3d4e1f67a06",
+        "deploymentTx": "0xc36c5f6000d0fdecb32f492c9518a36db268de164840a9ec0217569d5eeabb65",
+        "explorer": "https://sepolia.etherscan.io/address/0x16696a55578308b95d6b9597accbf3d4e1f67a06",
+        "verified": true
+      }
+    },
+    "report": {
+      "id": 1,
+      "lockTime": 1794210240,
+      "crossChainCutoff": 1794123840,
+      "maturity": 1796802240,
+      "publicationTx": "0x4ca1797532d3836d0942be6ac20d87052c6fe873d245009c7bb006671a3df1cd"
+    },
+    "liveTransactions": {
+      "addLiquidity": "0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f",
+      "buyYT": "0x5e1bf9e88d2cfe91752b076334058670ecdb874909ecd0663aa6678c9b737027",
+      "sellYT": "0xdb2a2da2e3097db60a3a334622ccb72ab9839b52bb284acb0e171a1f8dbbab25",
+      "atomicStakeAndSell": "0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a"
+    }
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "sharedCCIPToken": {
+      "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+      "BurnMintTokenPool": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087"
+    },
+    "v2Contracts": {
+      "CCIPStakeSenderV2": {
+        "address": "0xfb2c164ddb3676d03e1e443f3f2934b8d0df88e5",
+        "deploymentTx": "0x45dc450447f96db6b4061aa304d79c6d473d8e372802e12cee1b99e266cfc7b0",
+        "explorer": "https://sepolia.arbiscan.io/address/0xfb2c164ddb3676d03e1e443f3f2934b8d0df88e5",
+        "verified": true
+      }
+    },
+    "ccipTest": {
+      "messageId": "0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d",
+      "sourceTx": "0x4f4e9a9f44ce28fb65ca80c5ba19a6ccda56223156e6e90d33884ffc18a99de2",
+      "destinationTx": null,
+      "status": "SENT"
+    }
+  }
+}

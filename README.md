@@ -1,10 +1,27 @@
-# SmartContracts
+# RiskFi V2 smart contracts
 
-Foundry implementation of the [Mumbai build plan](RiskFi_Mumbai_Final_Build_Plan1.md). The repository records contract work in separate dated Git commits. For the two-chain demo, the collateral is **DemoUSD (`dUSD`)**, a six-decimal test token—not Circle USDC or a dollar-backed asset. The vault yield is simulated. The deployed and verified testnet contracts are recorded in [deployments/testnets.json](deployments/testnets.json); no report, YT series, or Uniswap hook pool has been deployed yet.
+RiskFi V2 is a Foundry demo of funded Yes/No reports, a 1:1 collateral receipt (REP), staker-owned yield tokens (YT), a Uniswap v4 YT/dUSD market, and an Arbitrum Sepolia → Ethereum Sepolia Chainlink CCIP funded vote. The active application uses **V2 only**. Earlier V1 application contracts, scripts, and tests were removed from this branch; their Git history remains. The six-decimal `DemoUSD` token and its registered Chainlink BurnMintTokenPools are shared testnet infrastructure, not Circle USDC or a dollar-backed asset. Yield is simulated, not lending income.
+
+## Judge links
+
+| What to verify | Contract entry point | Test or onchain evidence |
+|---|---|---|
+| Reviewer-approved report | [`ReportRegistry.publish`](src/ReportRegistry.sol#L28) | [V2 report transaction](https://sepolia.etherscan.io/tx/0x4ca1797532d3836d0942be6ac20d87052c6fe873d245009c7bb006671a3df1cd) |
+| Deposit → REP → verdict position + YT | [`RiskFiStakeVaultV2.deposit`](src/v2/RiskFiStakeVaultV2.sol#L76), [`stakeFromREP`](src/v2/RiskFiStakeVaultV2.sol#L90), [`stake`](src/v2/RiskFiStakeVaultV2.sol#L100) | [Eight-voter end-to-end test](test/EightVoterWorkflowV2.t.sol#L160) |
+| CCIP token-plus-data source | [`CCIPStakeSenderV2.stakeRemote`](src/v2/CCIPStakeSenderV2.sol#L70), [`StakeIntentV2`](src/v2/StakeIntentV2.sol) | [Arbitrum Sepolia source transaction](https://sepolia.arbiscan.io/tx/0x4f4e9a9f44ce28fb65ca80c5ba19a6ccda56223156e6e90d33884ffc18a99de2) |
+| CCIP destination credit and REP fallback | [`CCIPStakeReceiverV2._ccipReceive`](src/v2/CCIPStakeReceiverV2.sol#L50) | [V2 CCIP tests](test/CCIPV2.t.sol) and [message tracker](https://ccip.chain.link/#/side-drawer/msg/0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d) |
+| Uniswap v4 rate curve and quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L124), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L139) | [Quote and swap tests](test/YieldCurveV2.t.sol#L60) |
+| v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L270), [`YieldSwapRouter.unlockCallback`](src/uniswap/YieldSwapRouter.sol#L47) | [Live buy](https://sepolia.etherscan.io/tx/0x5e1bf9e88d2cfe91752b076334058670ecdb874909ecd0663aa6678c9b737027), [live sell](https://sepolia.etherscan.io/tx/0xdb2a2da2e3097db60a3a334622ccb72ab9839b52bb284acb0e171a1f8dbbab25) |
+| Hook permission bits and pool initialization | [`YieldCurveFactoryV2.deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Live pool creation](https://sepolia.etherscan.io/tx/0x61b15809af0f0af4af23e099afe327c76fc6c2afdf3b35c8c896798fa7808c) |
+| LP-owned YT inventory and yield | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Live liquidity](https://sepolia.etherscan.io/tx/0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f) |
+| Atomic stake and YT sale | [`StakeAndSellRouterV2.stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Live atomic transaction](https://sepolia.etherscan.io/tx/0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a) |
+| Final verdict and payout | [`propose`](src/v2/RiskFiStakeVaultV2.sol#L151), [`adjudicate`](src/v2/RiskFiStakeVaultV2.sol#L172), [`claimPrincipal`](src/v2/RiskFiStakeVaultV2.sol#L216) | [Local eight-voter end-to-end test](test/EightVoterWorkflowV2.t.sol#L160) |
+
+See [V2 testnet deployment addresses](deployments/v2-testnets.json), [deployment instructions](DEPLOYMENT.md), [end-to-end test record](V2_E2E.md), and [Uniswap feedback](FEEDBACK.md). The feedback form still needs a team submission with the public `FEEDBACK.md` URL.
 
 ## Build and test
 
-Install Foundry, then from this directory:
+Install Foundry and the dependencies in `lib/`, then run:
 
 ```sh
 forge install smartcontractkit/chainlink-ccip --no-git --shallow
@@ -12,61 +29,14 @@ forge install smartcontractkit/chainlink-evm --no-git --shallow
 forge install OpenZeppelin/openzeppelin-contracts@v4.9.6 --no-git --shallow
 forge install Uniswap/v4-core --no-git --shallow
 forge build
-forge test
 forge fmt --check
+forge test --match-path 'test/*V2.t.sol' --summary
 ```
 
-The dependencies live under ignored `lib/`. The source imports the official [Chainlink CCIP contracts](https://github.com/smartcontractkit/chainlink-ccip), Chainlink's [BurnMintERC20](https://github.com/smartcontractkit/chainlink-evm), and [Uniswap v4 core](https://github.com/Uniswap/v4-core). The current local build uses Solidity 0.8.26. Pin dependency revisions before a production release.
+The local V2 suite has **25 passing tests**. `test/DemoUSD.t.sol` separately checks the official Chainlink token pool setup. `test/V2LivePoolFork.t.sol` runs against a local fork of Sepolia's deployed PoolManager when `ETH_SEPOLIA_RPC_URL` is set; this test passed with the Tenderly public RPC. The fork sends no transaction to Sepolia.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ethereum Sepolia and Arbitrum Sepolia sequence, `.env` fields, CCIP pool registration, and explorer verification.
+## Deployment and time limits
 
-## Uniswap v4 integration for judges
+The V2 contracts are deployed and verified on Ethereum Sepolia and Arbitrum Sepolia. The current CCIP message was sent from Arbitrum Sepolia; [its status](https://ccip.chain.link/#/side-drawer/msg/0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d) must be checked before claiming destination credit. V2 fixes maturity at **30 days after the report lock**. Live verdict finalization and principal redemption cannot happen before then; a local fork can advance time to test those phases against deployed bytecode and state.
 
-The [developer feedback file](FEEDBACK.md) describes the implementation challenge and documentation requests. The [Uniswap Developer Feedback Form](https://developers.uniswap.org/hackathon-feedback) still needs a team submission containing the public URL of that file.
-
-| What to inspect | Exact implementation | Test |
-|---|---|---|
-| V2 time-aware rate curve and matching quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L124), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L139) | [Quote/swap parity and rate changes](test/YieldCurveV2.t.sol#L60) |
-| Actual v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L270), [input-first `YieldSwapRouter`](src/uniswap/YieldSwapRouter.sol#L47) | [Local V2 swap test](test/YieldCurveV2.t.sol#L60) |
-| Permission-bit hook creation and pool initialization | [`deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Mined hook test](test/YieldCurveV2.t.sol#L124) |
-| LP-owned liquidity and YT yield accounting | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Eight-voter workflow](test/EightVoterWorkflowV2.t.sol#L160) |
-| Stake and sell newly minted YT atomically | [`stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Atomic execution and rollback](test/StakeAndSellV2.t.sol#L85) |
-
-All 25 V2-only local tests pass. The separate Sepolia PoolManager fork test is currently blocked by a public RPC error. The V2 hook, router, and pool are **not deployed**; no live V2 swap or feedback-form submission is claimed.
-
-The active demo flow is V2: REP deposit, staker-owned YT, time-aware Uniswap market, and Chainlink CCIP funded vote. It is implemented under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). Run the [V2-only end-to-end test](V2_E2E.md) with `forge test --match-path 'test/*V2.t.sol' --summary`. V2 is local-only pending review; the deployed V1 contracts have not been replaced.
-
-The active end-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, REP, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and deferred REP cases), and [`RepReceiptV2.t.sol`](test/RepReceiptV2.t.sol) (REP backing and withdrawal).
-
-## Legacy V1 contract map (not used in the V2 demo)
-
-| Area | Contracts | What the tests establish |
-|---|---|---|
-| Publication | [`ReportRegistry`](src/ReportRegistry.sol) | Only publisher submits; reviewer signature binds both hashes, report settings, nonce, expiry, chain and registry. |
-| Funded votes | [`VoteMarket`](src/VoteMarket.sol), [`VotingPositionToken`](src/VotingPositionToken.sol), [`Settlement`](src/Settlement.sol) | Measured USDC deposits mint VPT; Yes/No payouts, 20% fee on losing pool, Void, repeat claim and 90-day claim window. |
-| Chainlink CCIP | [`DemoUSD`](src/DemoUSD.sol), [`CCIPStakeSender`](src/ccip/CCIPStakeSender.sol), [`CCIPStakeReceiver`](src/ccip/CCIPStakeReceiver.sol), [`StakeIntent`](src/ccip/StakeIntent.sol) | Official BurnMintERC20, BurnMintTokenPool, `Client`, `IRouterClient`, and `CCIPReceiver` types; a mock router delivers funds and data to credit a VPT, while late delivery is recoverable. |
-| Principal and yield | [`YieldVaultAdapter`](src/yield/YieldVaultAdapter.sol), [`YieldSplitter`](src/yield/YieldSplitter.sol), [`PrincipalToken`](src/yield/PrincipalToken.sol), [`YieldToken`](src/yield/YieldToken.sol) | One report locks at the precommitted time; PT is escrowed; ERC-20 YT checkpoints holder accrual; simulated loss scales principal payouts pro rata. |
-| Uniswap v4 | [`YieldMarketHook`](src/uniswap/YieldMarketHook.sol), [`YieldLPShare`](src/uniswap/YieldLPShare.sol), [`YieldSwapRouter`](src/uniswap/YieldSwapRouter.sol), [`Treasury`](src/Treasury.sol) | Official `PoolManager` executes buy/sell through a compatible prepay router; hook owns swap inventory and attributes YT income to LP shares; LP withdrawal works after maturity. |
-| Human reputation | [`Reputation`](src/Reputation.sol) | Backend-signed, report-scoped nullifier can mint one non-transferable badge to an eligible winning wallet; cash redemption has no IDKit gate. |
-
-The specific sponsor proofs are in [`test/DemoUSD.t.sol`](test/DemoUSD.t.sol), [`test/CCIP.t.sol`](test/CCIP.t.sol), [`test/UniswapHook.t.sol`](test/UniswapHook.t.sol), and [`test/Voting.t.sol`](test/Voting.t.sol). The Uniswap test deploys the actual v4 `PoolManager`, etches the hook at the required permission bits, initializes its pool, and buys and sells through `YieldSwapRouter`. The two-period test distributes 25 simulated six-decimal dollar units of yield across traders and LPs, allowing only rounding dust.
-
-## Contract economics
-
-- Deposit cutoff is `lockTime`; the 30-day observation and yield period starts then. Source CCIP entry closes earlier. A deposit delivered after `lockTime` is held for recovery.
-- Winner nominal payout is `stake + floor(stake × (losingPool − floor(losingPool / 5)) / winningPool)`. The treasury fee is `floor(losingPool / 5)`. Losers get zero. Void refunds accepted principal without a fee.
-- If the simulated vault has lost principal when settlement prepares, every nominal payout and fee is multiplied by `availablePrincipal / originalPrincipal`; settlement sweeps final rounding dust after claims expire. Previously distributed yield cannot be clawed back by a later vault loss.
-- PT is non-transferable and belongs to Settlement escrow. YT belongs to the Treasury at issue and earns recognized collateral-token yield while held. Selling YT transfers future yield rights, while earlier earned amounts remain with the previous holder.
-- Only one report can enter the initial splitter/YT series. Publish additional reports only with a separate configured market and splitter.
-
-## Deployment gates
-
-The token pools, Sepolia core contracts, and Arbitrum sender are deployed and verified. A live funded CCIP vote and Uniswap swap are still outstanding. Before judges can be shown those integrations:
-
-1. The official [Chainlink directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1) lists Arbitrum Sepolia → Ethereum Sepolia as a CCIP 2.0 lane. The DemoUSD pools are registered on both chains, and `PreflightSource` returned a live **token + data** `getFee` quote. Publish a reviewed report, configure `CCIPStakeSender`'s per-report cutoff, then demonstrate a funded delivery and destination VPT credit.
-2. Deploy the v4 hook to a mined address with exactly its declared permission flags. Configure the exact PoolKey, then run a buy, sell, LP yield claim and post-maturity withdrawal against Sepolia's deployed PoolManager using the compatible `YieldSwapRouter`. The standard swap-first router path does not prepay input for this hook.
-3. Replace the explicitly simulated vault only after validating a real Sepolia yield market for the exact accepted token, withdrawal behavior and principal loss cases. The mock's injected yield is not lending income; DemoUSD has no independent dollar value or Aave market.
-4. Integrate Agent Pass server verification and World IDKit Proof of Human verification. The contracts validate signed authorizations but cannot themselves prove that a backend checked the World result. Keep backend signing keys off the frontend.
-5. Run live receipt and swap smoke tests, export the transaction links, and submit the Uniswap feedback form. The deployed contracts are recorded, but no feedback form submission is claimed here.
-
-The source's `extraArgs` remain caller-supplied because CCIP lane execution settings vary. The receiver uses an authorized recovery operator for malformed messages without a decodable recipient; this is a custodial recovery authority that needs an operational policy before funds are accepted.
+The onchain report uses one vault and one YT series. It is a public demo: stakes and sides are visible, REP is a collateral receipt, the verdict position cannot be transferred, and the YT is transferable. Existing V1 contracts remain onchain but are not part of the active V2 workflow.

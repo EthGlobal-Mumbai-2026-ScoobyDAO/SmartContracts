@@ -1,6 +1,6 @@
 # RiskFi PT/YT V2 review
 
-This is a new, **local-only** implementation of the staker-owned yield design in the supplied build guide. No V2 transaction has been broadcast. The verified V1 Sepolia contracts remain unchanged.
+This is the active staker-owned yield implementation. V2 contracts are deployed and verified on Ethereum Sepolia and Arbitrum Sepolia; addresses and transaction receipts are in [v2-testnets.json](deployments/v2-testnets.json). The former V1 application code was removed from the active branch.
 
 ## Behavior
 
@@ -12,21 +12,21 @@ This is a new, **local-only** implementation of the staker-owned yield design in
 
 ## Regression evidence
 
-Run `forge test --match-path 'test/*V2.t.sol' --summary` for the 25 V2-only local tests; all passed at review time. They cover REP backing, local and CCIP-funded stakes, YT accrual, verdict settlement, quote/swap equality, 256 fuzzed round trips, time decay, rate bounds, maturity gates, slippage rollback, and mined hook deployment. The separate `V2LivePoolFork.t.sol` check needs a live Sepolia RPC; the most recent run failed because the public RPC returned `block not found`. `forge fmt --check` and `forge build` are separate gates. See [V2_E2E.md](V2_E2E.md) for the complete local workflow.
+Run `forge test --match-path 'test/*V2.t.sol' --summary` for the 25 V2-only local tests; all passed at review time. They cover REP backing, local and CCIP-funded stakes, YT accrual, verdict settlement, quote/swap equality, 256 fuzzed round trips, time decay, rate bounds, maturity gates, slippage rollback, and mined hook deployment. The separate `V2LivePoolFork.t.sol` check passed against Sepolia's actual PoolManager using a local fork and the Tenderly public RPC. `forge fmt --check` and `forge build` are separate gates. See [V2_E2E.md](V2_E2E.md) for the complete local workflow.
 
 [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) follows eight funded voters from signed report publication through five Yes and three No stakes (145/75 dUSD). Heidi's vote arrives through a mock CCIP router and gives her a V2 position and YT; a separate test sells her delivered YT through the v4 pool. Bob and Eve sell their newly minted YT during staking; Carol seeds the v4 pool with her YT and separate dUSD; Alice later buys YT. Two simulated yield periods distribute 33 dUSD to current YT holders and Carol's LP shares. A challenged No proposal is adjudicated Yes after maturity. All eight verdict positions are claimed, the treasury receives 15 dUSD from the losing pool, Carol exits LP after maturity, and principal rounding dust is swept after the claim window. The test accounts for every dUSD unit, including at most two base units of LP index rounding dust retained by the hook.
 
 [`CCIPV2.t.sol`](test/CCIPV2.t.sol) checks independently reusable payer nonces, router-only delivery, replay rejection, wrong-chain rejection, late-delivery REP withdrawal by the source payer, and operator recovery for malformed messages. These are local mock-router tests. [`PreflightSourceV2.s.sol`](script/PreflightSourceV2.s.sol) makes a read-only live router fee quote for the V2 token-plus-data message shape; it sends no CCIP message.
 
-The read-only Arbitrum Sepolia preflight returned a live quote of 2,001,988,491,940,296 wei for one dUSD and the V2 intent payload on the Ethereum Sepolia lane. The quote changes with network conditions and does not prove delivery. Deployment scripts are prepared as [`DeployV2Sepolia.s.sol`](script/DeployV2Sepolia.s.sol), [`DeployV2Source.s.sol`](script/DeployV2Source.s.sol), and [`ConfigureV2Lane.s.sol`](script/ConfigureV2Lane.s.sol). The sequence after review is destination vault and receiver, source sender, receiver allowlist, report publication and series initialization, then a configured source cutoff. No script has been broadcast.
+The Arbitrum Sepolia sender quoted 744250004505817 wei for a live 5 dUSD V2 token-plus-data message and sent it under message ID `0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d`. The quote varies with network conditions. The source transaction succeeded; destination credit must be confirmed separately. See [deployment steps](DEPLOYMENT.md).
 
 ## Boundaries for review
 
 - The vault uses **simulated yield injection** over DemoUSD. It is not an ERC-4626 lending integration, and DemoUSD is not Circle USDC.
 - One V2 vault and YT series serves one report. Fungible YT across multiple reports sharing a maturity needs a separate bucket design and index-normalized accounting.
 - V2 stakes and their Yes/No sides are public onchain. The non-transferable verdict position prevents secondary trading; it does not provide stake privacy.
-- V2 CCIP contracts are implemented and tested locally but are not deployed. Existing deployed V1 CCIP contracts are tied to the V1 market and cannot credit a V2 position. There is no live V2 delivery evidence or World backend yet.
-- The hook and atomic router are not deployed on Sepolia. The fork test executes only in local EVM state. A live swap, frontend flow, and end-to-end prize evidence remain pending.
+- The V2 CCIP sender and receiver are deployed, and a live message was sent. Until the receiver credits it, the source transaction is not live delivery evidence. There is no World backend yet.
+- The hook and atomic router are deployed and live buy/sell/atomic stake-and-sell transactions succeeded on Sepolia. Live LP yield claim, frontend flow, and final verdict payout remain pending.
 - The curve is a bounded market price mechanism, not an oracle for future yield or the report verdict. Formal security review, adversarial testing, and real-yield liquidity design are still required before non-demo funds.
 
-**Deployment is paused at the user's request for review.**
+**The report matures 30 days after lock; real-time settlement cannot occur before then.**

@@ -1,94 +1,26 @@
-# Testnet deployment and verification
+# RiskFi V2 testnet deployment
 
-This deployment targets **Ethereum Sepolia** for the market, vault, settlement, reputation, and Uniswap v4 hook. **Arbitrum Sepolia** is only the CCIP source. Collateral is the six-decimal `DemoUSD` test token (`dUSD`) on each chain, bridged with Chainlink's official burn/mint token pools. It is not Circle USDC.
+The active application uses V2 contracts. Addresses and transaction hashes are in [v2-testnets.json](deployments/v2-testnets.json). Ethereum Sepolia hosts the report, vault, REP, YT, Uniswap v4 market, and CCIP receiver. Arbitrum Sepolia hosts the CCIP sender. The already registered six-decimal DemoUSD token and BurnMintTokenPool exist on both testnets.
 
-## Current testnet deployment
+## Funding
 
-The verified token pools, Sepolia protocol contracts, Arbitrum CCIP sender, and configuration transaction hashes are recorded in [deployments/testnets.json](deployments/testnets.json). The live fork tests in `test/LivePreflight.t.sol` and `test/LiveDeployment.t.sol` check the deployed contracts and CCIP wiring. The current deployment uses the deployer address as a **demo identity signer**; no World IDKit backend has verified a person. No report has been published, so no YT series or Uniswap hook pool exists yet, and a funded cross-chain vote is still pending a reviewed report.
+Fund the **signing wallet** (the address derived from `DEPLOYER_PRIVATE_KEY`) with test ETH on **both** testnets. The Arbitrum Sepolia wallet pays the source gas and native ETH CCIP fee; the Ethereum Sepolia wallet pays deployments and market transactions. Fund or mint Arbitrum Sepolia DemoUSD to the source wallet before a vote. Do not send fee ETH directly to the CCIP router or sender: `CCIPStakeSenderV2.stakeRemote` forwards the attached native fee to the router. The live 5 dUSD test quoted 744250004505817 wei; each send must quote again because fees vary.
 
-## 1. Environment and independent preflight
+The current signer is `0xd561d3e95a02fDD8DbC94d15BFBF1b1634234b3a`. Use `cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY"` locally to confirm it matches your `.env` before signing. `.env` is ignored by Git; never commit the key.
 
-`.env.example` records the public addresses from the [Chainlink CCIP directory for Ethereum Sepolia](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia), the [Arbitrum Sepolia directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1), and [Uniswap's Sepolia deployments](https://developers.uniswap.org/docs/protocols/v4/deployments). Recheck them before broadcast. `.env` is Git-ignored. Put the funded deployer key there; keep it out of chat, logs, frontend code, and Git.
+## V2 deployment sequence
 
-Create one key in the [Etherscan API dashboard](https://etherscan.io/apidashboard) and set `ETHERSCAN_API_KEY` in `.env`. Etherscan API V2 uses that key for both Ethereum Sepolia and Arbitrum Sepolia; a separate Arbiscan key is unnecessary. See [Etherscan's key setup guide](https://docs.etherscan.io/set-up-your-api-key).
+The following scripts were run on testnets. They use the `.env` fields in [`.env.example`](.env.example). Source code verification uses `--verify --etherscan-api-key "$ETHERSCAN_API_KEY"` for deployment scripts; generated contracts such as REP, YT, and the hook may need a separate `forge verify-contract` after Etherscan indexes their creation transaction.
 
-```sh
-set -a
-source .env
-set +a
-forge build
-forge test
-forge fmt --check
-forge script script/PreflightLane.s.sol:PreflightLane --rpc-url "$ARB_SEPOLIA_RPC_URL" -vv
-```
+1. On Ethereum Sepolia, `DeployV2Sepolia` creates a fresh `ReportRegistry`, `RiskFiStakeVaultV2` (which creates REP), and `CCIPStakeReceiverV2`.
+2. On Arbitrum Sepolia, `DeployV2Source` creates `CCIPStakeSenderV2`. On Ethereum Sepolia, `ConfigureV2Lane` allowlists that sender in the receiver.
+3. On Ethereum Sepolia, `PublishV2Report` publishes a reviewer-signed report and initializes its YT series. On Arbitrum Sepolia, `ConfigureV2SourceCutoff` sets the same report's source cutoff.
+4. On Ethereum Sepolia, `DeployV2Factory` and `DeployV2Hook` mine the hook permission bits, initialize the actual v4 PoolManager pool, and deploy the compatible swap and atomic routers.
+5. On Ethereum Sepolia, `SeedV2Pool` stakes 100 dUSD Yes and supplies 50 dUSD plus 100 YT as initial LP inventory. `TradeV2Market` buys and sells YT and atomically stakes 10 dUSD No while selling its new YT.
+6. On Arbitrum Sepolia, `SendV2CCIP` sends a 5 dUSD No stake with a V2 token-plus-data message. Watch the [CCIP message](https://ccip.chain.link/#/side-drawer/msg/0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d) and confirm `CCIPStakeReceiverV2.delivered(messageId)`, `RiskFiStakeVaultV2.positionOf(wallet,false)`, and `StakerYieldToken.balanceOf(wallet)` on Ethereum Sepolia. A source transaction alone is not proof of delivery.
 
-The last command has already succeeded against the live Arbitrum Sepolia router. It proves the lane exists; it does not prove DemoUSD is registered yet.
+The V2 report has `lockTime = 1794210240`, `crossChainCutoff = 1794123840`, and `maturity = 1796802240` (Unix seconds). V2 settlement can only happen after maturity; the local [end-to-end test](V2_E2E.md) advances time to exercise challenge, adjudication, payout, and sweep. A deployed-state fork can test those future phases before the real clock reaches maturity.
 
-## 2. Deploy DemoUSD and register token admins
+## Checks and limitations
 
-The same script deploys Chainlink's `BurnMintERC20` derivative and `BurnMintTokenPool` on each chain. It grants the pool mint/burn roles, mints test tokens to the deployer, and claims the token-admin role. It deliberately waits to call `setPool` until both remote pool configurations are complete.
-
-```sh
-forge script script/DeployDemoUSD.s.sol:DeployDemoUSD --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-forge script script/DeployDemoUSD.s.sol:DeployDemoUSD --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-```
-
-Record the two `DemoUSD` and `BurnMintTokenPool` addresses as `SEPOLIA_DEMO_USD`, `SEPOLIA_DEMO_POOL`, `ARBITRUM_DEMO_USD`, and `ARBITRUM_DEMO_POOL` in `.env`. Both token contracts are separate deployments linked by CCIP pool configuration.
-
-```sh
-set -a; source .env; set +a
-forge script script/ConfigureDemoPool.s.sol:ConfigureDemoPool --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast -vv
-forge script script/ConfigureDemoPool.s.sol:ConfigureDemoPool --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast -vv
-forge script script/ActivateDemoPool.s.sol:ActivateDemoPool --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast -vv
-forge script script/ActivateDemoPool.s.sol:ActivateDemoPool --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast -vv
-forge script script/PreflightSource.s.sol:PreflightSource --rpc-url "$ARB_SEPOLIA_RPC_URL" -vv
-```
-
-`PreflightSource` calls Chainlink's live router `getFee` for a 1 dUSD programmable transfer with data using `ExtraArgsV3`. Stop if it reverts; a deployed token on each chain alone is insufficient. Verify registry `getPool(token)`, both remote pool/token settings, and the destination token address before sending funds.
-
-## 3. Deploy the Sepolia protocol and Arbitrum sender
-
-Set `IDENTITY_SIGNER` to the backend signer address. Until an IDKit backend verifies proofs, that signer is a **mock demo authorization**, not a World identity integration.
-
-```sh
-forge script script/DeploySepolia.s.sol:DeploySepolia --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-```
-
-Record `CCIPReceiver`, `Splitter`, `Treasury`, and the other printed addresses. Put `CCIPReceiver` in `SEPOLIA_CCIP_RECEIVER`, then deploy the Arbitrum-only sender:
-
-```sh
-set -a; source .env; set +a
-forge script script/DeploySource.s.sol:DeploySource --rpc-url "$ARB_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-```
-
-Record `CCIPSender` in `ARBITRUM_CCIP_SENDER`, then allowlist it on Ethereum Sepolia:
-
-```sh
-set -a; source .env; set +a
-forge script script/ConfigureLane.s.sol:ConfigureLane --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast -vv
-```
-
-After a report is published, configure the sender's report cutoff to the registry's `crossChainCutoff` before accepting remote deposits. The report publication requires an exact report/claim hash and a live reviewer approval signature. This repository does not forge that approval.
-
-## 4. Yield market after a report locks
-
-`YieldSplitter.lock(reportId)` must run after the report's `lockTime`; it creates the report-specific YT. Record `Splitter`, `Treasury`, and the `reportId` in `.env`. Then `DeployYieldHook` mines a CREATE2 salt for the exact v4 hook permission bits, deploys the hook through `YieldHookFactory`, initializes the v4 pool, and deploys the compatible `YieldSwapRouter`.
-
-```sh
-forge script script/DeployYieldHook.s.sol:DeployYieldHook --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast --verify --etherscan-api-key "$ETHERSCAN_API_KEY" -vv
-```
-
-Record `YieldMarketHook` in `SEPOLIA_HOOK`. Fund the Treasury with **separate deployer-owned dUSD** and seed it with its issued YT:
-
-```sh
-set -a; source .env; set +a
-forge script script/SeedPool.s.sol:SeedPool --rpc-url "$ETH_SEPOLIA_RPC_URL" --broadcast -vv
-```
-
-`LIQUIDITY_USD_AMOUNT` and `LIQUIDITY_YT_AMOUNT` are six-decimal base units. The first live swap must use `YieldSwapRouter`, which prepays input within the v4 unlock before the hook takes it. The usual swap-first router path is incompatible with this hook. Show an explorer transaction for a buy and sell, LP yield claim, and LP withdrawal after maturity before claiming the Uniswap prize integration is complete.
-
-## 5. Evidence to export
-
-For each chain, export verified contract addresses, deployment transaction hashes, explorer links, CCIP message ID and destination credit transaction, token-pool registry configuration, the v4 PoolKey/hook address and real swap transactions. `forge script --verify` submits source to the relevant explorer, but verify each address's explorer status and rerun `forge verify-contract` for any failure. Broadcast artifacts under `broadcast/` are Git-ignored; publish a reviewed `deployments/` JSON without keys.
-
-The 30-day claim clock is real on Sepolia. Mock yield injection can simulate a short demonstration of accrued assets, but it does not shorten the claim maturity or prove real lending interest. World Agent Pass and IDKit backends, their secrets, and a real yield adapter remain separate deployment gates.
+Run `forge test --match-path 'test/*V2.t.sol' --summary` for the 25 V2-only local tests and `forge test --match-path test/V2LivePoolFork.t.sol -vv` for the RPC-dependent PoolManager fork check. The test token is not Circle USDC and `injectYield` is a simulated demo action. A failed swap transaction on Sepolia used an insufficient gas limit before the successful live buy/sell run; use an adequate gas-estimate multiplier for this custom-accounting hook.

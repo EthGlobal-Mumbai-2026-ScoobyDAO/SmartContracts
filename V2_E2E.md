@@ -23,4 +23,4 @@ The same test file separately checks that Heidi can sell her CCIP-funded YT thro
 
 ## External fork check
 
-`test/V2LivePoolFork.t.sol` is a separate local EVM fork test against Ethereum Sepolia's deployed PoolManager. It needs `ETH_SEPOLIA_RPC_URL`; the 25-test local command above does not. A public RPC returned `block not found` during the most recent fork run, so that run did not establish a passing fork check. No transaction was broadcast.
+`test/V2LivePoolFork.t.sol` is a separate local EVM fork test against Ethereum Sepolia's deployed PoolManager. It needs `ETH_SEPOLIA_RPC_URL`; the 25-test local command above does not. The fork test passed using `https://sepolia.gateway.tenderly.co`. It broadcasts no transaction. The onchain deployment and CCIP source message are recorded in [v2-testnets.json](deployments/v2-testnets.json); the live CCIP destination result must be checked separately.
