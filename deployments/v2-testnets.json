@@ -81,7 +81,10 @@
       "atomicStakeAndSell": "0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a",
       "injectYield": "0xe837d7ff95efc98d4921a7c3bdd2ad50d12b29c57bd862e21c8f4cef2176c9ec",
       "claimLPYield": "0x7fc2d0effd7f918e72022f1f1f5bc485da7f5d7ca82802836751aead261e4568",
-      "claimWalletYTYield": "0x364ab559d495f4f72136c3e50932c58f3e11b9804cffd8dca8fd6462c4c1332c"
+      "claimWalletYTYield": "0x364ab559d495f4f72136c3e50932c58f3e11b9804cffd8dca8fd6462c4c1332c",
+      "postCCIPInjectYield": "0x373def2303b31624062f066bcc7d1f9c64a038aa9c4519c66e15e79d93b103e4",
+      "postCCIPClaimLPYield": "0xb89ea488c1067e47ac33f727b4b834124a33bebfce71852851813241b98b8374",
+      "postCCIPClaimWalletYTYield": "0x2ec3844e8ddfe4627488fadad6a3ab57dd8543125b936168ee96ec550d64039d"
     }
   },
   "arbitrumSepolia": {
@@ -101,8 +104,11 @@
     "ccipTest": {
       "messageId": "0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d",
       "sourceTx": "0x4f4e9a9f44ce28fb65ca80c5ba19a6ccda56223156e6e90d33884ffc18a99de2",
-      "destinationTx": null,
-      "status": "SENT"
+      "destinationTx": "0x9402e5d2292c1e0f3862678fc8e86eec1d479013a5d0dd0c08a25ccc6f38b9b1",
+      "initialFailedExecutionTx": "0x9e16a3dccbb9215668b02b55ab7391b4d775bda8bf9ac582a0cf66d199401ea0",
+      "status": "SUCCESS",
+      "destinationNoPosition": "15000000",
+      "destinationWalletYTAfterDelivery": "5000232"
     }
   }
 }

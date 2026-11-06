@@ -39,7 +39,7 @@ contract PreflightSourceV2 is Script {
             data: abi.encode(intent),
             tokenAmounts: tokens,
             feeToken: address(0),
-            extraArgs: ExtraArgsCodec._getBasicEncodedExtraArgsV3(500_000, bytes4(0))
+            extraArgs: ExtraArgsCodec._getBasicEncodedExtraArgsV3(1_500_000, bytes4(0))
         });
         uint256 fee = router.getFee(destination, message);
         console2.log("V2 Arbitrum Sepolia -> Ethereum Sepolia 1 dUSD + data fee (wei)", fee);

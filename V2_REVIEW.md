@@ -18,14 +18,14 @@ Run `forge test --match-path 'test/*V2.t.sol' --summary` for the 25 V2-only loca
 
 [`CCIPV2.t.sol`](test/CCIPV2.t.sol) checks independently reusable payer nonces, router-only delivery, replay rejection, wrong-chain rejection, late-delivery REP withdrawal by the source payer, and operator recovery for malformed messages. These are local mock-router tests. [`PreflightSourceV2.s.sol`](script/PreflightSourceV2.s.sol) makes a read-only live router fee quote for the V2 token-plus-data message shape; it sends no CCIP message.
 
-The Arbitrum Sepolia sender quoted 744250004505817 wei for a live 5 dUSD V2 token-plus-data message and sent it under message ID `0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d`. The quote varies with network conditions. The source transaction succeeded; destination credit must be confirmed separately. See [deployment steps](DEPLOYMENT.md).
+The Arbitrum Sepolia sender quoted 744250004505817 wei for a live 5 dUSD V2 token-plus-data message and sent it under message ID `0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d`. The quote varies with network conditions. The first destination attempt failed with an empty-data `ReceiverError`; a higher-gas manual execution succeeded. The receiver credited a 5 dUSD No position and minted 5 million YT base units. A later live yield injection paid 0.434802 dUSD to the wallet holding that delivered YT. See [deployment steps](DEPLOYMENT.md).
 
 ## Boundaries for review
 
 - The vault uses **simulated yield injection** over DemoUSD. It is not an ERC-4626 lending integration, and DemoUSD is not Circle USDC.
 - One V2 vault and YT series serves one report. Fungible YT across multiple reports sharing a maturity needs a separate bucket design and index-normalized accounting.
 - V2 stakes and their Yes/No sides are public onchain. The non-transferable verdict position prevents secondary trading; it does not provide stake privacy.
-- The V2 CCIP sender and receiver are deployed, and a live message was sent. Until the receiver credits it, the source transaction is not live delivery evidence. There is no World backend yet.
+- The V2 CCIP sender and receiver are deployed, and a live message reached `SUCCESS` on Ethereum Sepolia after a manual gas override. The deployed-state fork now requires `delivered(messageId) = true` and checks the funded position and YT. There is no World backend yet.
 - The hook and atomic router are deployed and live buy/sell/atomic stake-and-sell transactions succeeded on Sepolia. A live 10 dUSD demo yield injection paid 9.999977 dUSD to the LP and 0.000021 dUSD to the wallet's directly held YT (two base units remain in index rounding). The frontend flow and final verdict payout remain pending until the live report matures; the deployed-state fork exercises those future phases.
 - The curve is a bounded market price mechanism, not an oracle for future yield or the report verdict. Formal security review, adversarial testing, and real-yield liquidity design are still required before non-demo funds.
 

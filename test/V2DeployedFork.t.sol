@@ -28,12 +28,9 @@ contract V2DeployedForkTest is Test {
         assertEq(receiver.sourceSender(), vm.envAddress("ARBITRUM_V2_CCIP_SENDER"));
         assertEq(address(hook.yt()), address(yt));
         assertEq(vault.positionOf(WALLET, true), 100_000_000);
-        if (receiver.delivered(MESSAGE_ID)) {
-            assertEq(vault.positionOf(WALLET, false), 15_000_000);
-            assertGe(yt.balanceOf(WALLET), 5_000_000);
-        } else {
-            assertEq(vault.positionOf(WALLET, false), 10_000_000);
-        }
+        assertTrue(receiver.delivered(MESSAGE_ID), "live CCIP message must be delivered");
+        assertEq(vault.positionOf(WALLET, false), 15_000_000);
+        assertGe(yt.balanceOf(WALLET), 5_000_000);
         assertGt(hook.ytReserve(), 0);
         uint256 totalNo = vault.totalNo();
         uint256 principal = vault.totalYes() + totalNo;
