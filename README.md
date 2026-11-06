@@ -20,6 +20,20 @@ The dependencies live under ignored `lib/`. The source imports the official [Cha
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ethereum Sepolia and Arbitrum Sepolia sequence, `.env` fields, CCIP pool registration, and explorer verification.
 
+## Uniswap v4 integration for judges
+
+The [developer feedback file](FEEDBACK.md) describes the implementation challenge and documentation requests. The [Uniswap Developer Feedback Form](https://developers.uniswap.org/hackathon-feedback) still needs a team submission containing the public URL of that file.
+
+| What to inspect | Exact implementation | Test |
+|---|---|---|
+| V2 time-aware rate curve and matching quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L123), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L138) | [Quote/swap parity and rate changes](test/YieldCurveV2.t.sol#L60) |
+| Actual v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L254), [input-first `YieldSwapRouter`](src/uniswap/YieldSwapRouter.sol#L47) | [Local fork of Sepolia's PoolManager](test/V2LivePoolFork.t.sol#L52) |
+| Permission-bit hook creation and pool initialization | [`deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Mined hook test](test/YieldCurveV2.t.sol#L124) |
+| LP-owned liquidity and YT yield accounting | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L172), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L222) | [Eight-voter workflow](test/EightVoterWorkflowV2.t.sol#L147) |
+| Stake and sell newly minted YT atomically | [`stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Atomic execution and rollback](test/StakeAndSellV2.t.sol#L85) |
+
+V2 has passed local tests, including a fork that uses Sepolia's deployed PoolManager. The V2 hook, router, and pool are **not deployed**; no live V2 swap or feedback-form submission is claimed.
+
 The new staker-owned PT/YT, time-aware Uniswap design, and Chainlink CCIP funded-vote route are implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
 
 End-to-end local regressions are [`EightVoterWorkflowV2.t.sol`](test/EightVoterWorkflowV2.t.sol) (eight voters including a mock CCIP-funded V2 stake, tradable YT, yield, and verdict), [`CCIPV2.t.sol`](test/CCIPV2.t.sol) (V2 funded message and recovery cases), and [`CCIP.t.sol`](test/CCIP.t.sol) (V1 workflow).
