@@ -117,7 +117,7 @@ contract CCIPTest {
         vm.prank(ALICE);
         sender.stakeRemote(_intent(1), 5_000_000, "");
         require(market.total(id, true) == 5_000_000, "credit");
-        require(positions.balanceOf(positions.tokenId(id, true), ALICE) == 5_000_000, "VPT");
+        require(positions.balanceOf(ALICE, positions.tokenId(id, true)) == 5_000_000, "VPT");
         require(usdc.balanceOf(address(market)) == 5_000_000, "funded");
         vm.expectRevert();
         vm.prank(ALICE);

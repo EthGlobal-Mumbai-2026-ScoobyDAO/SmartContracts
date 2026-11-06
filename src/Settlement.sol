@@ -125,7 +125,7 @@ contract Settlement is Guard {
         Outcome outcome = decisions[id].finalOutcome;
         if (outcome != Outcome.Yes && outcome != Outcome.No) return false;
         bool yes = outcome == Outcome.Yes;
-        return winningPrincipalRedeemed[id][account] > 0 || positions.balanceOf(positions.tokenId(id, yes), account) > 0;
+        return winningPrincipalRedeemed[id][account] > 0 || positions.balanceOf(account, positions.tokenId(id, yes)) > 0;
     }
 
     function claimFee(uint256 id) external nonReentrant {

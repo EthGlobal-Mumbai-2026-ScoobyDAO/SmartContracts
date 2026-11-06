@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.26;
+import {ERC1155} from "@openzeppelin/contracts@4.9.6/token/ERC1155/ERC1155.sol";
 
-contract VotingPositionToken {
+contract VotingPositionToken is ERC1155 {
     address public immutable owner;
     address public market;
     address public settlement;
-    mapping(uint256 => mapping(address => uint256)) public balanceOf;
-    mapping(address => mapping(address => bool)) public isApprovedForAll;
-    event TransferSingle(
-        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
-    );
-    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
-    constructor() {
+    constructor() ERC1155("") {
         owner = msg.sender;
     }
 
@@ -28,35 +23,12 @@ contract VotingPositionToken {
     }
 
     function mint(address to, uint256 id, uint256 amount) external {
-        require(msg.sender == market && to != address(0) && amount != 0, "MINT");
-        balanceOf[id][to] += amount;
-        emit TransferSingle(msg.sender, address(0), to, id, amount);
+        require(msg.sender == market && amount != 0, "MINT");
+        _mint(to, id, amount, "");
     }
 
     function burn(address from, uint256 id, uint256 amount) external {
         require(msg.sender == settlement && amount != 0, "BURN");
-        balanceOf[id][from] -= amount;
-        emit TransferSingle(msg.sender, from, address(0), id, amount);
-    }
-
-    function setApprovalForAll(address operator, bool approved) external {
-        isApprovedForAll[msg.sender][operator] = approved;
-        emit ApprovalForAll(msg.sender, operator, approved);
-    }
-
-    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external {
-        require(msg.sender == from || isApprovedForAll[from][msg.sender], "APPROVAL");
-        require(to != address(0), "TO");
-        balanceOf[id][from] -= amount;
-        balanceOf[id][to] += amount;
-        emit TransferSingle(msg.sender, from, to, id, amount);
-        if (to.code.length != 0) {
-            (bool ok, bytes memory ret) = to.call(
-                abi.encodeWithSignature(
-                    "onERC1155Received(address,address,uint256,uint256,bytes)", msg.sender, from, id, amount, data
-                )
-            );
-            require(ok && ret.length >= 32 && abi.decode(ret, (bytes4)) == 0xf23a6e61, "RECEIVER");
-        }
+        _burn(from, id, amount);
     }
 }
