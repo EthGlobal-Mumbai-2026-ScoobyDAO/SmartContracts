@@ -4,6 +4,7 @@ import {Test} from "forge-std/Test.sol";
 import {MockUSDC} from "./Voting.t.sol";
 import {YieldToken} from "../src/yield/YieldToken.sol";
 import {YieldMarketHook} from "../src/uniswap/YieldMarketHook.sol";
+import {YieldHookFactory} from "../src/uniswap/YieldHookFactory.sol";
 import {YieldSwapRouter} from "../src/uniswap/YieldSwapRouter.sol";
 import {YieldLPShare} from "../src/uniswap/YieldLPShare.sol";
 import {PoolManager} from "v4-core/PoolManager.sol";
@@ -132,5 +133,43 @@ contract UniswapHookTest is Test {
         assertEq(hook.claimLPYield(), 0, "double LP claim");
         vm.prank(ALICE);
         assertEq(yt.claimYield(), 0, "double YT claim");
+    }
+
+    function testFactoryMinesRealHookAddressAndSwaps() public {
+        YieldHookFactory factory = new YieldHookFactory(address(this));
+        bytes32 initCodeHash = keccak256(
+            abi.encodePacked(
+                type(YieldMarketHook).creationCode,
+                abi.encode(IPoolManager(address(manager)), usdc, yt, maturity, uint24(3000))
+            )
+        );
+        bytes32 salt;
+        address predicted;
+        bool found;
+        uint160 flags = Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_ADD_LIQUIDITY_FLAG;
+        for (uint256 i; i < 200_000; ++i) {
+            salt = bytes32(i);
+            predicted = address(
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, initCodeHash))))
+            );
+            if ((uint160(predicted) & Hooks.ALL_HOOK_MASK) == flags) {
+                found = true;
+                break;
+            }
+        }
+        assertTrue(found, "salt not found");
+        YieldMarketHook actual =
+            factory.deployAndInitialize(IPoolManager(address(manager)), usdc, yt, maturity, 3000, salt);
+        assertEq(address(actual), predicted);
+        assertGt(address(actual.shares()).code.length, 0);
+        PoolKey memory minedKey = PoolKey(key.currency0, key.currency1, 0, 1, IHooks(address(actual)));
+        usdc.approve(address(actual), type(uint256).max);
+        yt.approve(address(actual), type(uint256).max);
+        usdc.mint(address(this), 500_000_000);
+        actual.addLiquidity(500_000_000, 500_000_000, 1);
+        bool zeroForOne = address(usdc) < address(yt);
+        vm.prank(ALICE);
+        uint256 output = router.swapExactInput(minedKey, zeroForOne, 10_000_000, 1, uint64(block.timestamp + 1 hours));
+        assertGt(output, 0);
     }
 }
