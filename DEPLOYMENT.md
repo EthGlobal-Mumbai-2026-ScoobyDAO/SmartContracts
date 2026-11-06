@@ -2,6 +2,10 @@
 
 This deployment targets **Ethereum Sepolia** for the market, vault, settlement, reputation, and Uniswap v4 hook. **Arbitrum Sepolia** is only the CCIP source. Collateral is the six-decimal `DemoUSD` test token (`dUSD`) on each chain, bridged with Chainlink's official burn/mint token pools. It is not Circle USDC.
 
+## Current testnet deployment
+
+The verified token pools, Sepolia protocol contracts, Arbitrum CCIP sender, and configuration transaction hashes are recorded in [deployments/testnets.json](deployments/testnets.json). The live fork tests in `test/LivePreflight.t.sol` and `test/LiveDeployment.t.sol` check the deployed contracts and CCIP wiring. The current deployment uses the deployer address as a **demo identity signer**; no World IDKit backend has verified a person. No report has been published, so no YT series or Uniswap hook pool exists yet, and a funded cross-chain vote is still pending a reviewed report.
+
 ## 1. Environment and independent preflight
 
 `.env.example` records the public addresses from the [Chainlink CCIP directory for Ethereum Sepolia](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia), the [Arbitrum Sepolia directory](https://docs.chain.link/ccip/directory/testnet/chain/ethereum-testnet-sepolia-arbitrum-1), and [Uniswap's Sepolia deployments](https://developers.uniswap.org/docs/protocols/v4/deployments). Recheck them before broadcast. `.env` is Git-ignored. Put the funded deployer key there; keep it out of chat, logs, frontend code, and Git.
