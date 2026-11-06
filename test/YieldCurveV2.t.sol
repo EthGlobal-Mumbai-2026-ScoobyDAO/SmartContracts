@@ -103,6 +103,24 @@ contract YieldCurveV2Test is Test {
         router.swapExactInput(key, address(usdc) < address(yt), 1_000_000, quote + 1, uint64(block.timestamp + 1 hours));
     }
 
+    function testFuzzQuoteAndRoundTrip(uint256 rawInput, uint256 rawWait) public {
+        uint256 input = bound(rawInput, 10_000, 1_000_000);
+        vm.warp(block.timestamp + bound(rawWait, 0, 15 days));
+        uint256 quote = hook.quoteBuy(input);
+        vm.prank(ALICE);
+        uint256 bought =
+            router.swapExactInput(key, address(usdc) < address(yt), input, quote, uint64(block.timestamp + 1 hours));
+        assertEq(bought, quote);
+        uint256 sellQuote = hook.quoteSell(bought);
+        vm.prank(ALICE);
+        uint256 received = router.swapExactInput(
+            key, address(yt) < address(usdc), bought, sellQuote, uint64(block.timestamp + 1 hours)
+        );
+        assertEq(received, sellQuote);
+        assertLe(received, input, "round trip must not create collateral");
+        assertEq(hook.impliedRateWad(), ANCHOR, "net position restored");
+    }
+
     function testMinedFactoryCreatesWorkingPool() public {
         YieldCurveFactoryV2 factory = new YieldCurveFactoryV2(address(this));
         bytes32 initHash = keccak256(

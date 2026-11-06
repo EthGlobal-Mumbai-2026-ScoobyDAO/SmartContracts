@@ -99,4 +99,22 @@ contract StakerYieldV2Test is Test {
         vm.prank(ALICE);
         vault.claimPrincipal(true, 1);
     }
+
+    function testPrincipalLossAndChallengedAdjudication() public {
+        vm.prank(ALICE);
+        vault.stake(reportId, true, 80_000_000, ALICE, ALICE);
+        vm.prank(BOB);
+        vault.stake(reportId, false, 20_000_000, BOB, BOB);
+        vault.simulateLoss(address(0xDEAD), 10_000_000);
+        vm.warp(lockTime + 30 days);
+        vault.propose(RiskFiStakeVaultV2.Outcome.No, keccak256("initial evidence"));
+        vault.challenge(keccak256("counterevidence"));
+        vm.expectRevert();
+        vault.finalize();
+        vault.adjudicate(RiskFiStakeVaultV2.Outcome.Yes, keccak256("reviewed evidence"));
+        vm.prank(ALICE);
+        assertEq(vault.claimPrincipal(true, 80_000_000), 86_400_000);
+        assertEq(vault.claimFee(), 3_600_000);
+        assertEq(usdc.balanceOf(address(vault)), 0);
+    }
 }
