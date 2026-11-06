@@ -5,6 +5,7 @@ import {ReportRegistry} from "../src/ReportRegistry.sol";
 import {VotingPositionToken} from "../src/VotingPositionToken.sol";
 import {VoteMarket} from "../src/VoteMarket.sol";
 import {Settlement} from "../src/Settlement.sol";
+import {Reputation} from "../src/Reputation.sol";
 
 interface Vm {
     function warp(uint256) external;
@@ -37,6 +38,7 @@ contract VotingTest {
     VotingPositionToken positions;
     VoteMarket market;
     Settlement settlement;
+    Reputation reputation;
     uint256 id;
     uint256 lockTime;
 
@@ -46,6 +48,7 @@ contract VotingTest {
         positions = new VotingPositionToken();
         market = new VoteMarket(usdc, registry, positions);
         settlement = new Settlement(registry, market, positions, TREASURY);
+        reputation = new Reputation(settlement, vm.addr(REVIEWER_KEY));
         positions.configure(address(market), address(settlement));
         market.configure(address(settlement), address(0xCC1));
         lockTime = block.timestamp + 2 days;
@@ -100,5 +103,18 @@ contract VotingTest {
     function testNoFakeFunds() public {
         vm.expectRevert(); vm.prank(ALICE); market.stakeLocal(id, true, 100_000_000, ALICE);
         require(market.total(id, true) == 0, "unfunded");
+    }
+    function testOneREPForOneNullifier() public {
+        _stake(true); _finalize(Settlement.Outcome.Yes);
+        bytes32 scoped = keccak256("world-nullifier-scoped-to-report");
+        uint64 expiry = uint64(block.timestamp + 1 hours);
+        bytes32 digest = reputation.authorizationDigest(id, ALICE, scoped, 9, expiry);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(REVIEWER_KEY, digest);
+        reputation.claimWinnerREP(id, ALICE, scoped, 9, expiry, abi.encodePacked(r, s, v));
+        require(reputation.balanceOf(ALICE, id) == 1, "badge");
+        vm.expectRevert(); reputation.claimWinnerREP(id, ALICE, scoped, 9, expiry, abi.encodePacked(r, s, v));
+        digest = reputation.authorizationDigest(id, BOB, scoped, 10, expiry);
+        (v, r, s) = vm.sign(REVIEWER_KEY, digest);
+        vm.expectRevert(); reputation.claimWinnerREP(id, BOB, scoped, 10, expiry, abi.encodePacked(r, s, v));
     }
 }

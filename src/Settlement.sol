@@ -15,6 +15,7 @@ contract Settlement is Guard {
     mapping(uint256 => Decision) public decisions;
     mapping(uint256 => uint256) public claimed;
     mapping(uint256 => uint256) public feePaid;
+    mapping(uint256 => mapping(address => uint256)) public winningPrincipalRedeemed;
     event Proposed(uint256 indexed id, Outcome outcome, bytes32 evidenceHash);
     event Challenged(uint256 indexed id, bytes32 evidenceHash);
     event Finalized(uint256 indexed id, Outcome outcome);
@@ -72,9 +73,16 @@ contract Settlement is Guard {
         if (outcome == Outcome.Void) payout = amount;
         else if ((outcome == Outcome.Yes) == yes) payout = amount + amount * (loser - loser / 5) / winner;
         positions.burn(msg.sender, positions.tokenId(id, yes), amount);
+        if (payout > 0 && outcome != Outcome.Void) winningPrincipalRedeemed[id][msg.sender] += amount;
         claimed[id] += payout;
         if (payout > 0) market.release(id, msg.sender, payout);
         emit Redeemed(id, msg.sender, yes, amount, payout);
+    }
+    function eligibleWinner(uint256 id, address account) external view returns (bool) {
+        Outcome outcome = decisions[id].finalOutcome;
+        if (outcome != Outcome.Yes && outcome != Outcome.No) return false;
+        bool yes = outcome == Outcome.Yes;
+        return winningPrincipalRedeemed[id][account] > 0 || positions.balanceOf(positions.tokenId(id, yes), account) > 0;
     }
     function claimFee(uint256 id) external nonReentrant {
         Outcome outcome = decisions[id].finalOutcome;
