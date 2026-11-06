@@ -13,10 +13,79 @@
         "deploymentTx": "0x5f65df42042d265c4de66a2e57c8232cad2b62d58496aabda7487b827b81625f",
         "explorer": "https://sepolia.etherscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
         "verified": true
+      },
+      "Treasury": {
+        "address": "0xe397409ef4d8927342c65fa0e11d3eeecaf137a5",
+        "deploymentTx": "0x55312f0f819f74024b5577ec0f738bfe0d2978f6e844110db2facc7e6f1c132f",
+        "explorer": "https://sepolia.etherscan.io/address/0xe397409ef4d8927342c65fa0e11d3eeecaf137a5",
+        "verified": true
+      },
+      "ReportRegistry": {
+        "address": "0xfb2c164ddb3676d03e1e443f3f2934b8d0df88e5",
+        "deploymentTx": "0xa662b39c60c9dc02dbd68650df33a31fb434a5c9db5ee0a7634013aa58db8ce1",
+        "explorer": "https://sepolia.etherscan.io/address/0xfb2c164ddb3676d03e1e443f3f2934b8d0df88e5",
+        "verified": true
+      },
+      "VotingPositionToken": {
+        "address": "0xc5990311aa4e057eaf6132d527c3f8c47ea597af",
+        "deploymentTx": "0x32b92ec883c88bbf5e1ac8bcdc956c4fcb61461e1d15d58b1ee29c038d0922da",
+        "explorer": "https://sepolia.etherscan.io/address/0xc5990311aa4e057eaf6132d527c3f8c47ea597af",
+        "verified": true
+      },
+      "VoteMarket": {
+        "address": "0x313b1b96ab196eaf7ac937e7d3f56bf2acf397bf",
+        "deploymentTx": "0x8bd40a8f0ac7086add4588c3cbadc3174c93c65ec0dfea61f43872ca02f726ba",
+        "explorer": "https://sepolia.etherscan.io/address/0x313b1b96ab196eaf7ac937e7d3f56bf2acf397bf",
+        "verified": true
+      },
+      "Settlement": {
+        "address": "0x8225b1651c1ffcb04bd28e9c123bb29482e9d92d",
+        "deploymentTx": "0x48b661fe712f9590f16055c5a5f349738071a25dd325386e1069a08c511e9a9f",
+        "explorer": "https://sepolia.etherscan.io/address/0x8225b1651c1ffcb04bd28e9c123bb29482e9d92d",
+        "verified": true
+      },
+      "YieldSplitter": {
+        "address": "0x323fe6fee78dd1d39fe533d59c821fb986635196",
+        "deploymentTx": "0xb203710762455a47a0772bb03ea631329a56856713d06b27262d33664e4ece12",
+        "explorer": "https://sepolia.etherscan.io/address/0x323fe6fee78dd1d39fe533d59c821fb986635196",
+        "verified": true
+      },
+      "YieldVaultAdapter": {
+        "address": "0x43c3f44c30bd420e9ef41caf69372ba250af7220",
+        "deploymentTx": "0x67764776f87e5299cf21007619fb9762a084e16a2f37f7ed7c6e08ee16dc8dcd",
+        "explorer": "https://sepolia.etherscan.io/address/0x43c3f44c30bd420e9ef41caf69372ba250af7220",
+        "verified": true
+      },
+      "CCIPStakeReceiver": {
+        "address": "0x41afd00b58646319028a1ceec7149da17a34f60e",
+        "deploymentTx": "0xbaf862fb8bcf83ec4eb134ae7c7e0f84f698e0a6180f8de9c820be14d507093d",
+        "explorer": "https://sepolia.etherscan.io/address/0x41afd00b58646319028a1ceec7149da17a34f60e",
+        "verified": true
+      },
+      "Reputation": {
+        "address": "0xbe2da285cb6bb8e3eacd483b906a1666327e278a",
+        "deploymentTx": "0x57a8a7d66b1b2fd1043f93b4d5e808b96834e0ac425c67b55c64a0600217e5d7",
+        "explorer": "https://sepolia.etherscan.io/address/0xbe2da285cb6bb8e3eacd483b906a1666327e278a",
+        "verified": true
+      },
+      "YieldHookFactory": {
+        "address": "0x8815fc0e221f4ed0e0aa4faa4bd87f7434d37adf",
+        "deploymentTx": "0xddda4c639cfab2f2b8b2a627adad48f18f00283a709fc1c46429b800c233409c",
+        "explorer": "https://sepolia.etherscan.io/address/0x8815fc0e221f4ed0e0aa4faa4bd87f7434d37adf",
+        "verified": true
+      },
+      "PrincipalToken": {
+        "address": "0x255A025e159F9211eDd99Ae87bD13dd7DA0aA19F",
+        "deploymentTx": "0xb203710762455a47a0772bb03ea631329a56856713d06b27262d33664e4ece12",
+        "explorer": "https://sepolia.etherscan.io/address/0x255A025e159F9211eDd99Ae87bD13dd7DA0aA19F",
+        "verified": true,
+        "createdBy": "YieldSplitter constructor"
       }
     },
     "poolConfigurationTx": "0x8681f2e037592f61067167b56f3b978a5785cdc7608769f67b7a2cf57e1cd62a",
-    "poolActivationTx": "0x5d8ed89470b15cb5856dd1c191d080d3589baca2aabdf81935587d45f8b5c3bb"
+    "poolActivationTx": "0x5d8ed89470b15cb5856dd1c191d080d3589baca2aabdf81935587d45f8b5c3bb",
+    "laneAllowlistTx": "0xd430c7dce8107fb03aa383a6cfdd7c2ecc6af65f3507838fe6e14b138f62054e",
+    "identitySignerMode": "deployer address, demo backend authorization only; no World IDKit verification yet"
   },
   "arbitrumSepolia": {
     "chainId": 421614,
@@ -31,6 +100,12 @@
         "address": "0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
         "deploymentTx": "0x49dff7a5232bec05a232aab99bec20de0ee8d55522d181a42c40ad810508dee7",
         "explorer": "https://sepolia.arbiscan.io/address/0xf2e0a115e34c997abe433fd8c5862f0ee98da087",
+        "verified": true
+      },
+      "CCIPStakeSender": {
+        "address": "0xe397409ef4d8927342c65fa0e11d3eeecaf137a5",
+        "deploymentTx": "0x28cb681834dd9c8cc985e5f6f0498685e9a91c015a4f832a2b29cc6a67d25999",
+        "explorer": "https://sepolia.arbiscan.io/address/0xe397409ef4d8927342c65fa0e11d3eeecaf137a5",
         "verified": true
       }
     },
