@@ -13,7 +13,7 @@ RiskFi V2 is a Foundry demo of funded Yes/No reports, a 1:1 collateral receipt (
 | Uniswap v4 rate curve and quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L124), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L139) | [Quote and swap tests](test/YieldCurveV2.t.sol#L60) |
 | v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L270), [`YieldSwapRouter.unlockCallback`](src/uniswap/YieldSwapRouter.sol#L47) | [Live buy](https://sepolia.etherscan.io/tx/0x5e1bf9e88d2cfe91752b076334058670ecdb874909ecd0663aa6678c9b737027), [live sell](https://sepolia.etherscan.io/tx/0xdb2a2da2e3097db60a3a334622ccb72ab9839b52bb284acb0e171a1f8dbbab25) |
 | Hook permission bits and pool initialization | [`YieldCurveFactoryV2.deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Live pool creation](https://sepolia.etherscan.io/tx/0x61b15809af0f0af4af23e099afe327c76fc6c2afdf3b35c8c896798fa7808c) |
-| LP-owned YT inventory and yield | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Live liquidity](https://sepolia.etherscan.io/tx/0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f) |
+| LP-owned YT inventory and yield | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Live liquidity](https://sepolia.etherscan.io/tx/0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f), [live yield injection](https://sepolia.etherscan.io/tx/0xe837d7ff95efc98d4921a7c3bdd2ad50d12b29c57bd862e21c8f4cef2176c9ec), [LP yield claim](https://sepolia.etherscan.io/tx/0x7fc2d0effd7f918e72022f1f1f5bc485da7f5d7ca82802836751aead261e4568) |
 | Atomic stake and YT sale | [`StakeAndSellRouterV2.stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Live atomic transaction](https://sepolia.etherscan.io/tx/0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a) |
 | Final verdict and payout | [`propose`](src/v2/RiskFiStakeVaultV2.sol#L151), [`adjudicate`](src/v2/RiskFiStakeVaultV2.sol#L172), [`claimPrincipal`](src/v2/RiskFiStakeVaultV2.sol#L216) | [Local eight-voter end-to-end test](test/EightVoterWorkflowV2.t.sol#L160) |
 
@@ -33,7 +33,7 @@ forge fmt --check
 forge test --match-path 'test/*V2.t.sol' --summary
 ```
 
-The local V2 suite has **25 passing tests**. `test/DemoUSD.t.sol` separately checks the official Chainlink token pool setup. `test/V2LivePoolFork.t.sol` runs against a local fork of Sepolia's deployed PoolManager when `ETH_SEPOLIA_RPC_URL` is set; this test passed with the Tenderly public RPC. The fork sends no transaction to Sepolia.
+The local V2 suite has **25 passing tests**. `test/DemoUSD.t.sol` separately checks the official Chainlink token pool setup. `test/V2LivePoolFork.t.sol` runs against a local fork of Sepolia's deployed PoolManager. `test/V2DeployedFork.t.sol` checks the live V2 source and destination wiring, then advances a local Sepolia fork to the report's maturity for dispute, payout, and LP exit. With RPC URLs set, the complete suite has **29 passing tests**. Fork tests send no transaction to either testnet.
 
 ## Deployment and time limits
 

@@ -78,7 +78,10 @@
       "addLiquidity": "0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f",
       "buyYT": "0x5e1bf9e88d2cfe91752b076334058670ecdb874909ecd0663aa6678c9b737027",
       "sellYT": "0xdb2a2da2e3097db60a3a334622ccb72ab9839b52bb284acb0e171a1f8dbbab25",
-      "atomicStakeAndSell": "0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a"
+      "atomicStakeAndSell": "0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a",
+      "injectYield": "0xe837d7ff95efc98d4921a7c3bdd2ad50d12b29c57bd862e21c8f4cef2176c9ec",
+      "claimLPYield": "0x7fc2d0effd7f918e72022f1f1f5bc485da7f5d7ca82802836751aead261e4568",
+      "claimWalletYTYield": "0x364ab559d495f4f72136c3e50932c58f3e11b9804cffd8dca8fd6462c4c1332c"
     }
   },
   "arbitrumSepolia": {

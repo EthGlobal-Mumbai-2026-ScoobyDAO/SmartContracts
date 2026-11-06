@@ -26,7 +26,7 @@ The Arbitrum Sepolia sender quoted 744250004505817 wei for a live 5 dUSD V2 toke
 - One V2 vault and YT series serves one report. Fungible YT across multiple reports sharing a maturity needs a separate bucket design and index-normalized accounting.
 - V2 stakes and their Yes/No sides are public onchain. The non-transferable verdict position prevents secondary trading; it does not provide stake privacy.
 - The V2 CCIP sender and receiver are deployed, and a live message was sent. Until the receiver credits it, the source transaction is not live delivery evidence. There is no World backend yet.
-- The hook and atomic router are deployed and live buy/sell/atomic stake-and-sell transactions succeeded on Sepolia. Live LP yield claim, frontend flow, and final verdict payout remain pending.
+- The hook and atomic router are deployed and live buy/sell/atomic stake-and-sell transactions succeeded on Sepolia. A live 10 dUSD demo yield injection paid 9.999977 dUSD to the LP and 0.000021 dUSD to the wallet's directly held YT (two base units remain in index rounding). The frontend flow and final verdict payout remain pending until the live report matures; the deployed-state fork exercises those future phases.
 - The curve is a bounded market price mechanism, not an oracle for future yield or the report verdict. Formal security review, adversarial testing, and real-yield liquidity design are still required before non-demo funds.
 
 **The report matures 30 days after lock; real-time settlement cannot occur before then.**
