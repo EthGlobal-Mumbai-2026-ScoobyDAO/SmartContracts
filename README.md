@@ -20,6 +20,8 @@ The dependencies live under ignored `lib/`. The source imports the official [Cha
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ethereum Sepolia and Arbitrum Sepolia sequence, `.env` fields, CCIP pool registration, and explorer verification.
 
+The new staker-owned PT/YT and time-aware Uniswap design is implemented separately under [`src/v2`](src/v2) and summarized in [V2_REVIEW.md](V2_REVIEW.md). V2 is local-only pending review; the deployed V1 contracts have not been replaced.
+
 ## Contract map
 
 | Area | Contracts | What the tests establish |
