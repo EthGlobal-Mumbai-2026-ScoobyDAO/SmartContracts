@@ -1,0 +1,22 @@
+{
+  "token": "RiskFi Demo Dollar (dUSD), 6 decimals, test token only",
+  "claimFunction": "claim()",
+  "amountPerClaim": "100000000",
+  "cooldownSeconds": 60,
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+    "PublicDemoUSDFaucet": "0x0c23f7d58e22554e20419728889ffce161938c35",
+    "deploymentTx": "0x9dcf75cb9cc242cb7e17661187f0ab7838c6a305e36f2d989bcc055788cbbc2d",
+    "grantMinterRoleTx": "0xc63b69be10147ef13f4fe5f036775525981a05ad1a6ef93eecedda4b30a325f3",
+    "claimTestTx": "0xde57b6ab8c29d5b7a6e3ba1979707261cff78e1f55ebc6a5f2510e855369e70d"
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "DemoUSD": "0x3d1f1bffb82a244bf58ff42a3202e7d25aeb2525",
+    "PublicDemoUSDFaucet": "0xbe2da285cb6bb8e3eacd483b906a1666327e278a",
+    "deploymentTx": "0x29cb0cd44f922f5bf3975ab3fa5761d3a3eaa389f19a0a8a69c935db3fef80d6",
+    "grantMinterRoleTx": "0xa6dd1ac34d1e2f5fbe5dc80ff6f9c65a8d157e8e9388aa6121d55f67c285d367",
+    "claimTestTx": "0x0a3754a62343b0bb12689848769b53f0517bfdb83c6a66c9c969a5e561ca34fd"
+  }
+}
