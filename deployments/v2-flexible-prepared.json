@@ -1,0 +1,24 @@
+{
+  "status": "infrastructure-deployed-report-not-published",
+  "note": "No 10-minute voting clock has started. Publish only when the browser integration and demo voters are ready.",
+  "ethereumSepolia": {
+    "chainId": 11155111,
+    "FlexibleReportRegistry": "0xe983eb98b00e9c26179202b69393d97981794447",
+    "RiskFiStakeVaultV2": "0x152ba69f4603c22b5f15c87fc6b25fcb7d5bb2e7",
+    "StakeReceiptREP": "0x9be44465edbdb4635a8a9b8ebe953dc69f43f846",
+    "CCIPStakeReceiverV2": "0xeb367823d9aaf02820e60a7d5846d32d67d34f2b",
+    "transactions": {
+      "registry": "0x1a5ad888c87be6f45dca05067a15951199e1cb032b4521ca9918bd1989b5cc55",
+      "vault": "0xb45e18fc881594c9b2a65b8ab2b9c44b534d270dffb6a6a82ed14aae270c34a6",
+      "receiver": "0x2387a5ddfb3de6e25554d83347ab2fc60581f1483de7f960947c6074e252f1ed",
+      "allowlistSender": "0x55cd1c9a84d183deae43c9b93b0573b2b0e7fb28e99e17df0bfa7a44e9ec9b8c"
+    }
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "CCIPStakeSenderV2": "0x41afd00b58646319028a1ceec7149da17a34f60e",
+    "transactions": {
+      "sender": "0x2809481c3a5ab7626c2f06e5f80c121d704e71e202aa4b724be479f389d371e0"
+    }
+  }
+}
