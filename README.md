@@ -2,6 +2,8 @@
 
 RiskFi V2 is a Foundry demo of funded Yes/No reports, a 1:1 collateral receipt (REP), staker-owned yield tokens (YT), a Uniswap v4 YT/dUSD market, and an Arbitrum Sepolia → Ethereum Sepolia Chainlink CCIP funded vote. The active application uses **V2 only**. Earlier V1 application contracts, scripts, and tests were removed from this branch; their Git history remains. The six-decimal `DemoUSD` token and its registered Chainlink BurnMintTokenPools are shared testnet infrastructure, not Circle USDC or a dollar-backed asset. Yield is simulated, not lending income.
 
+Review the live demo step by step in [V2_TRANSACTION_WALKTHROUGH.md](V2_TRANSACTION_WALKTHROUGH.md); every onchain step links to its transaction.
+
 ## Judge links
 
 | What to verify | Contract entry point | Test or onchain evidence |
@@ -12,7 +14,7 @@ RiskFi V2 is a Foundry demo of funded Yes/No reports, a 1:1 collateral receipt (
 | CCIP destination credit and REP fallback | [`CCIPStakeReceiverV2._ccipReceive`](src/v2/CCIPStakeReceiverV2.sol#L50) | [Successful destination execution](https://sepolia.etherscan.io/tx/0x9402e5d2292c1e0f3862678fc8e86eec1d479013a5d0dd0c08a25ccc6f38b9b1), [V2 CCIP tests](test/CCIPV2.t.sol), [message tracker](https://ccip.chain.link/#/side-drawer/msg/0xaed819aad1fde53644aa058481a0f606f0ae2e9f78a9bbf2a3264e8c4db1456d) |
 | Uniswap v4 rate curve and quotes | [`quoteBuy`](src/v2/YieldCurveHookV2.sol#L124), [`quoteSell`](src/v2/YieldCurveHookV2.sol#L139) | [Quote and swap tests](test/YieldCurveV2.t.sol#L60) |
 | v4 custom-accounting swap | [`beforeSwap`](src/v2/YieldCurveHookV2.sol#L270), [`YieldSwapRouter.unlockCallback`](src/uniswap/YieldSwapRouter.sol#L47) | [Live buy](https://sepolia.etherscan.io/tx/0x5e1bf9e88d2cfe91752b076334058670ecdb874909ecd0663aa6678c9b737027), [live sell](https://sepolia.etherscan.io/tx/0xdb2a2da2e3097db60a3a334622ccb72ab9839b52bb284acb0e171a1f8dbbab25) |
-| Hook permission bits and pool initialization | [`YieldCurveFactoryV2.deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Live pool creation](https://sepolia.etherscan.io/tx/0x61b15809af0f0af4af23e099afe327c76fc6c2afdf3b35c8c896798fa7808c) |
+| Hook permission bits and pool initialization | [`YieldCurveFactoryV2.deployAndInitialize`](src/v2/YieldCurveFactoryV2.sol#L22) | [Live pool creation](https://sepolia.etherscan.io/tx/0x61b15809af0f0af4af23e099afe327c76fc6c6c2afdf3b35c8c896798fa7808c) |
 | LP-owned YT inventory and yield | [`addLiquidity`](src/v2/YieldCurveHookV2.sol#L188), [`claimLPYield`](src/v2/YieldCurveHookV2.sol#L238) | [Live liquidity](https://sepolia.etherscan.io/tx/0x076b98e0b8a1aeb43ded81737de69bc09a2ea11830e6ec4466bd3850b82e493f), [live yield injection](https://sepolia.etherscan.io/tx/0xe837d7ff95efc98d4921a7c3bdd2ad50d12b29c57bd862e21c8f4cef2176c9ec), [LP yield claim](https://sepolia.etherscan.io/tx/0x7fc2d0effd7f918e72022f1f1f5bc485da7f5d7ca82802836751aead261e4568) |
 | Atomic stake and YT sale | [`StakeAndSellRouterV2.stakeAndSellYield`](src/v2/StakeAndSellRouterV2.sol#L48) | [Live atomic transaction](https://sepolia.etherscan.io/tx/0x8f5e454b971a1b3a19a684b1ca47bcd1916250b706148329456292e8e7a0a63a) |
 | Final verdict and payout | [`propose`](src/v2/RiskFiStakeVaultV2.sol#L151), [`adjudicate`](src/v2/RiskFiStakeVaultV2.sol#L172), [`claimPrincipal`](src/v2/RiskFiStakeVaultV2.sol#L216) | [Local eight-voter end-to-end test](test/EightVoterWorkflowV2.t.sol#L160) |
