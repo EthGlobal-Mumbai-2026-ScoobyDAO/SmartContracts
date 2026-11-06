@@ -39,6 +39,7 @@ contract YieldCurveHookV2 is Guard {
     uint256 public ytReserve;
     uint256 public lpYieldPerShare;
     uint256 public lpYieldReserved;
+    uint256 public unattributedYield;
     mapping(address => uint256) public paidLPIndex;
     mapping(address => uint256) public unclaimedLPYield;
     event PoolConfigured(bytes32 keyHash);
@@ -146,11 +147,26 @@ contract YieldCurveHookV2 is Guard {
         require(usdcOut > 0 && usdcOut < usdcReserve, "USDC_RESERVE");
     }
 
+    /// @notice YT yield that arrived while no LP shares existed (e.g. YT sent straight to the
+    /// hook before the first LP). Kept out of swap reserves and LP yield; owner-claimable.
+    function claimUnattributedYield(address to) external nonReentrant returns (uint256 amount) {
+        require(msg.sender == owner && to != address(0), "OWNER");
+        _checkpointGlobal();
+        amount = unattributedYield;
+        unattributedYield = 0;
+        if (amount > 0) usdc.safeTransfer(to, amount);
+    }
+
     function _checkpointGlobal() internal {
         uint256 earned = yt.claimYield();
         if (earned == 0) return;
-        uint256 supply = shares.totalSupply();
-        require(supply > 0, "UNOWNED_YIELD");
+        uint256 supply = address(shares) == address(0) ? 0 : shares.totalSupply();
+        if (supply == 0) {
+            // Previously `require(supply > 0, "UNOWNED_YIELD")`: one YT donation that earned
+            // yield before the first LP blocked every later addLiquidity and swap for good.
+            unattributedYield += earned;
+            return;
+        }
         lpYieldReserved += earned;
         lpYieldPerShare += earned * 1e18 / supply;
     }

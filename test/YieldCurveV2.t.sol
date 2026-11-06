@@ -155,4 +155,52 @@ contract YieldCurveV2Test is Test {
         actual.addLiquidity(10_000_000, 100_000_000, 1);
         assertGt(actual.quoteSell(1_000_000), 0);
     }
+
+    /// Regression: YT sent to a hook before its first LP used to make every later
+    /// addLiquidity and swap revert with UNOWNED_YIELD once that YT earned yield.
+    function testDonatedYTBeforeFirstLPDoesNotBrickPool() public {
+        YieldCurveHookV2 implementation = new YieldCurveHookV2(
+            IPoolManager(address(manager)), usdc, yt, maturity, 3000, ANCHOR, SLOPE, MIN_RATE, MAX_RATE
+        );
+        // Same permission bits, different address (bits above the low 14 are free).
+        address hookAddress = address(uint160(implementation.REQUIRED_FLAGS()) | (uint160(1) << 40));
+        vm.etch(hookAddress, address(implementation).code);
+        YieldCurveHookV2 fresh = YieldCurveHookV2(hookAddress);
+        address c0 = address(usdc) < address(yt) ? address(usdc) : address(yt);
+        address c1 = address(usdc) < address(yt) ? address(yt) : address(usdc);
+        PoolKey memory freshKey = PoolKey(Currency.wrap(c0), Currency.wrap(c1), 0, 1, IHooks(hookAddress));
+        fresh.configurePool(freshKey);
+        manager.initialize(freshKey, 1 << 96);
+
+        // Griefer donates 1 YT to the empty pool; that YT then earns simulated yield.
+        yt.mint(address(this), 101_000_000);
+        yt.transfer(hookAddress, 1_000_000);
+        usdc.mint(address(yt), 1_000_000);
+        yt.notifyYield(1_000_000);
+        uint256 donatedYield = yt.unclaimedUSDC(hookAddress) + yt.balanceOf(hookAddress)
+            * (yt.globalIndex() - yt.paidIndex(hookAddress)) / 1e18;
+        assertGt(donatedYield, 0);
+
+        // First LP can still join, and the pool can still trade.
+        usdc.mint(address(this), 10_000_000);
+        usdc.approve(hookAddress, type(uint256).max);
+        yt.approve(hookAddress, type(uint256).max);
+        fresh.addLiquidity(10_000_000, 100_000_000, 1);
+        assertEq(fresh.unattributedYield(), donatedYield, "pre-LP yield set aside");
+        assertEq(fresh.lpYieldReserved(), 0, "LPs do not receive yield from before they joined");
+        uint256 quote = fresh.quoteBuy(100_000);
+        vm.prank(ALICE);
+        uint256 bought = router.swapExactInput(
+            freshKey, address(usdc) < address(yt), 100_000, quote, uint64(block.timestamp + 1 hours)
+        );
+        assertEq(bought, quote);
+
+        // Only the owner can collect the set-aside yield.
+        vm.prank(ALICE);
+        vm.expectRevert(bytes("OWNER"));
+        fresh.claimUnattributedYield(ALICE);
+        assertEq(fresh.claimUnattributedYield(address(0xFEE)), donatedYield);
+        assertEq(usdc.balanceOf(address(0xFEE)), donatedYield);
+        assertEq(fresh.unattributedYield(), 0);
+    }
 }

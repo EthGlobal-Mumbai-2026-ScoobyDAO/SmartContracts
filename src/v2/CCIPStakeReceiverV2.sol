@@ -7,7 +7,9 @@ import {CCIPReceiver} from "chainlink-ccip/applications/CCIPReceiver.sol";
 import {RiskFiStakeVaultV2} from "./RiskFiStakeVaultV2.sol";
 import {StakeIntentV2} from "./StakeIntentV2.sol";
 
-/// @notice Credits only delivered CCIP collateral to V2; failed credit stays recoverable.
+/// @notice Credits only delivered CCIP collateral to V2. Delivered collateral is first deposited
+/// as REP; if the stake cannot be made, the source payer receives that REP. Undecodable messages
+/// stay recoverable by the recovery operator.
 contract CCIPStakeReceiverV2 is CCIPReceiver, Guard {
     using SafeToken for IERC20;
 
@@ -23,6 +25,7 @@ contract CCIPStakeReceiverV2 is CCIPReceiver, Guard {
 
     event Credited(bytes32 indexed messageId, uint256 indexed reportId, address indexed recipient, uint256 amount);
     event Held(bytes32 indexed messageId, address indexed sourceAccount, uint256 amount);
+    event DeferredAsREP(bytes32 indexed messageId, address indexed sourceAccount, uint256 amount);
     event Recovered(bytes32 indexed messageId, address indexed to, uint256 amount);
 
     constructor(address router_, uint64 selector_, IERC20 usdc_, RiskFiStakeVaultV2 vault_, address operator_)
@@ -66,15 +69,29 @@ contract CCIPStakeReceiverV2 is CCIPReceiver, Guard {
         bool valid = decoded && intent.protocolVersion == 2 && intent.reportId != 0
             && intent.reportId == vault.reportId() && sourceAccount != address(0) && intent.recipient != address(0)
             && token.amount >= intent.minAmount && block.timestamp <= intent.deadline && !usedSourceNonce[nonceKey];
-        if (valid) {
-            usedSourceNonce[nonceKey] = true;
+        if (sourceAccount != address(0)) {
+            // 1. Delivered collateral becomes REP held here. Funds are safe from this point on.
             usdc.safeApprove(address(vault), 0);
             usdc.safeApprove(address(vault), token.amount);
-            try vault.stake(intent.reportId, intent.yes, token.amount, intent.recipient, intent.recipient) {
-                emit Credited(message.messageId, intent.reportId, intent.recipient, token.amount);
+            try vault.deposit(token.amount, address(this)) {
+                // 2. Try to stake that REP for the recipient (position + YT).
+                if (valid) {
+                    usedSourceNonce[nonceKey] = true;
+                    try vault.stakeFromREP(
+                        intent.reportId, intent.yes, token.amount, intent.recipient, intent.recipient
+                    ) {
+                        emit Credited(message.messageId, intent.reportId, intent.recipient, token.amount);
+                        return;
+                    } catch {}
+                }
+                // 3. Late, expired, replayed nonce, or stake failed: the payer keeps REP and can
+                //    withdraw it for collateral (or stake it elsewhere) on this chain.
+                require(vault.rep().transfer(sourceAccount, token.amount), "REP_TRANSFER");
+                emit DeferredAsREP(message.messageId, sourceAccount, token.amount);
                 return;
             } catch {}
         }
+        // Undecodable message (no known payer), or deposit failed: operator/payer recovery.
         recoverable[message.messageId] = token.amount;
         recoverySourceAccount[message.messageId] = sourceAccount;
         emit Held(message.messageId, sourceAccount, token.amount);

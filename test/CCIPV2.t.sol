@@ -95,20 +95,45 @@ contract CCIPV2Test is Test {
         bytes32 messageId = keccak256(abi.encode(uint256(1), address(sender)));
         vm.warp(lockTime);
         router.deliver(messageId);
-        assertEq(receiver.recoverable(messageId), 5_000_000);
-        assertEq(receiver.recoverySourceAccount(messageId), ALICE);
+        // Late delivery: collateral is credited as REP to the source payer, not staked.
+        assertEq(receiver.recoverable(messageId), 0, "no raw refund balance");
+        assertEq(vault.rep().balanceOf(ALICE), 5_000_000, "payer holds REP");
+        assertEq(vault.rep().balanceOf(address(receiver)), 0);
+        assertEq(vault.rep().balanceOf(BOB), 0, "recipient gets nothing for a failed stake");
         assertEq(vault.positionOf(BOB, true), 0);
         assertEq(yt.balanceOf(BOB), 0);
-        vm.expectRevert();
-        vm.prank(BOB);
-        receiver.recover(messageId, BOB);
-        vm.prank(ALICE);
-        receiver.recover(messageId, ALICE);
-        assertEq(usdc.balanceOf(ALICE), 10_000_000);
         assertEq(usdc.balanceOf(address(receiver)), 0);
-        vm.expectRevert();
+        assertEq(usdc.balanceOf(address(vault)), 5_000_000, "REP collateral held by the vault");
+        vm.expectRevert(bytes("NO_FUNDS"));
         vm.prank(ALICE);
         receiver.recover(messageId, ALICE);
+        // REP after lock cannot be staked, but it can always be withdrawn 1:1.
+        vm.expectRevert(bytes("CLOSED"));
+        vm.prank(ALICE);
+        vault.stakeFromREP(reportId, true, 5_000_000, ALICE, ALICE);
+        vm.prank(ALICE);
+        vault.withdraw(5_000_000);
+        assertEq(usdc.balanceOf(ALICE), 10_000_000);
+        assertEq(vault.rep().totalSupply(), 0);
+    }
+
+    function testExpiredDeadlineBeforeLockAlsoBecomesREPThatCanBeStaked() public {
+        router.setAutoDeliver(false);
+        StakeIntentV2 memory intent = _intent(ALICE, BOB, 3);
+        intent.deadline = uint64(block.timestamp + 1 hours);
+        vm.prank(ALICE);
+        sender.stakeRemote(intent, 2_000_000, "");
+        bytes32 messageId = keccak256(abi.encode(uint256(1), address(sender)));
+        vm.warp(block.timestamp + 2 hours); // past the intent deadline, still before lock
+        router.deliver(messageId);
+        assertEq(vault.rep().balanceOf(ALICE), 2_000_000);
+        assertEq(vault.positionOf(BOB, true), 0);
+        // The payer chooses to stake the REP herself on this chain.
+        vm.prank(ALICE);
+        vault.stakeFromREP(reportId, false, 2_000_000, ALICE, ALICE);
+        assertEq(vault.positionOf(ALICE, false), 2_000_000);
+        assertEq(yt.balanceOf(ALICE), 2_000_000);
+        assertEq(vault.rep().totalSupply(), 0);
     }
 
     function testMalformedDeliveryNeedsRecoveryOperatorAndWrongChainReverts() public {

@@ -4,9 +4,12 @@ pragma solidity ^0.8.26;
 import {IERC20, SafeToken, Guard} from "../Utils.sol";
 import {ReportRegistry} from "../ReportRegistry.sol";
 import {StakerYieldToken} from "./StakerYieldToken.sol";
+import {StakeReceiptREP} from "./StakeReceiptREP.sol";
 
 /// @notice One reviewed report: non-transferable verdict positions and staker-owned YT.
 /// Collateral stays here; yield injection and principal loss are simulated demo actions.
+/// Money flow: deposit -> REP (1:1 receipt) -> stake burns REP -> verdict position + YT.
+/// Idle REP collateral is ring-fenced: losses, settlement and sweeps only use staked principal.
 contract RiskFiStakeVaultV2 is Guard {
     using SafeToken for IERC20;
 
@@ -17,6 +20,7 @@ contract RiskFiStakeVaultV2 is Guard {
         Void
     }
     IERC20 public immutable usdc;
+    StakeReceiptREP public immutable rep;
     ReportRegistry public immutable registry;
     address public immutable admin;
     address public immutable treasury;
@@ -38,6 +42,8 @@ contract RiskFiStakeVaultV2 is Guard {
     bool public feeClaimed;
 
     event SeriesInitialized(uint256 indexed reportId, address yt, uint64 maturity);
+    event Deposited(address indexed payer, address indexed owner, uint256 amount);
+    event Withdrawn(address indexed owner, uint256 amount);
     event Staked(address indexed owner, bool indexed yes, uint256 amount, address ytReceiver);
     event YieldInjected(uint256 amount);
     event LossSimulated(uint256 amount);
@@ -52,6 +58,7 @@ contract RiskFiStakeVaultV2 is Guard {
         registry = registry_;
         admin = admin_;
         treasury = treasury_;
+        rep = new StakeReceiptREP(address(this));
     }
 
     function initializeSeries(uint256 id) external {
@@ -64,18 +71,58 @@ contract RiskFiStakeVaultV2 is Guard {
         emit SeriesInitialized(id, address(yt), maturity);
     }
 
-    /// @dev The payer is msg.sender. A router can pay while crediting another owner.
+    /// @notice Collateral in, REP out (1:1). `msg.sender` pays; `owner` receives REP.
+    /// Allowed at any time; only staking is gated by the report's lock time.
+    function deposit(uint256 amount, address owner) external nonReentrant {
+        _deposit(amount, owner);
+    }
+
+    /// @notice Burns unstaked REP and returns the same amount of collateral.
+    function withdraw(uint256 amount) external nonReentrant {
+        require(amount > 0, "AMOUNT");
+        rep.burn(msg.sender, amount);
+        usdc.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    /// @notice Burns the caller's REP and opens a verdict position for `positionOwner`,
+    /// minting the same notional of YT to `ytReceiver`.
+    function stakeFromREP(uint256 id, bool yes, uint256 amount, address positionOwner, address ytReceiver)
+        external
+        nonReentrant
+        returns (uint256)
+    {
+        return _stakeREP(id, yes, amount, positionOwner, ytReceiver);
+    }
+
+    /// @notice Deposit and stake in one call. The payer is msg.sender; a router or CCIP adapter
+    /// can pay while crediting another owner. Internally: collateral -> REP -> burn REP -> position.
     function stake(uint256 id, bool yes, uint256 amount, address positionOwner, address ytReceiver)
         external
         nonReentrant
         returns (uint256)
     {
-        require(id == reportId && id != 0 && amount > 0, "SERIES_OR_AMOUNT");
-        require(positionOwner != address(0) && ytReceiver != address(0), "RECIPIENT");
-        require(block.timestamp < registry.getReport(id).lockTime, "CLOSED");
+        _deposit(amount, msg.sender);
+        return _stakeREP(id, yes, amount, positionOwner, ytReceiver);
+    }
+
+    function _deposit(uint256 amount, address owner) internal {
+        require(amount > 0 && owner != address(0), "DEPOSIT");
         uint256 beforeBalance = usdc.balanceOf(address(this));
         usdc.safeTransferFrom(msg.sender, address(this), amount);
         require(usdc.balanceOf(address(this)) - beforeBalance == amount, "TOKEN_DELTA");
+        rep.mint(owner, amount);
+        emit Deposited(msg.sender, owner, amount);
+    }
+
+    function _stakeREP(uint256 id, bool yes, uint256 amount, address positionOwner, address ytReceiver)
+        internal
+        returns (uint256)
+    {
+        require(id == reportId && id != 0 && amount > 0, "SERIES_OR_AMOUNT");
+        require(positionOwner != address(0) && ytReceiver != address(0), "RECIPIENT");
+        require(block.timestamp < registry.getReport(id).lockTime, "CLOSED");
+        rep.burn(msg.sender, amount); // REP is locked into the position: never a second claim
         positionOf[positionOwner][yes] += amount;
         if (yes) totalYes += amount;
         else totalNo += amount;
@@ -96,6 +143,7 @@ contract RiskFiStakeVaultV2 is Guard {
 
     function simulateLoss(address sink, uint256 amount) external nonReentrant {
         require(msg.sender == admin && sink != address(0) && finalizedAt == 0, "LOSS_AUTH");
+        require(amount <= _stakedBalance(), "LOSS_EXCEEDS_STAKE"); // idle REP collateral is not at risk
         usdc.safeTransfer(sink, amount);
         emit LossSimulated(amount);
     }
@@ -146,9 +194,14 @@ contract RiskFiStakeVaultV2 is Guard {
         finalizedAt = uint64(block.timestamp);
         yt.mature();
         uint256 totalPrincipal = totalYes + totalNo;
-        principalAvailable = usdc.balanceOf(address(this));
+        principalAvailable = _stakedBalance();
         if (principalAvailable > totalPrincipal) principalAvailable = totalPrincipal;
         emit Finalized(outcome, principalAvailable);
+    }
+
+    /// @dev Collateral held for staked positions = balance minus collateral backing unstaked REP.
+    function _stakedBalance() internal view returns (uint256) {
+        return usdc.balanceOf(address(this)) - rep.totalSupply();
     }
 
     function _release(address to, uint256 nominal) internal returns (uint256 paid) {
@@ -188,7 +241,7 @@ contract RiskFiStakeVaultV2 is Guard {
         require(finalizedAt != 0 && block.timestamp > uint256(finalizedAt) + 90 days, "CLAIM_OPEN");
         nominalReleased = totalYes + totalNo;
         actualPaid = principalAvailable;
-        uint256 amount = usdc.balanceOf(address(this));
+        uint256 amount = _stakedBalance(); // never sweeps collateral backing unstaked REP
         if (amount != 0) usdc.safeTransfer(treasury, amount);
     }
 }
