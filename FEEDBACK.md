@@ -29,6 +29,3 @@ The second challenge was accounting for yield on YT held by the market. We hold 
 
 For a time-aware market, examples showing how to expose quotes that match hook execution, handle rounding and maturity, and test a mined permission-bit hook against a deployed PoolManager would also be useful.
 
-## Feedback form submission
-
-This file provides the technical detail for the [Uniswap Developer Feedback Form](https://developers.uniswap.org/hackathon-feedback). Include the [public GitHub URL for this file](https://github.com/EthGlobal-Mumbai-2026-ScoobyDAO/SmartContracts/blob/main/FEEDBACK.md) in the form's **Any additional feedback** field after confirming it opens while signed out. Form answers about participant identity, time spent, ratings, and support used should come from the team. **The form has not been submitted.**
